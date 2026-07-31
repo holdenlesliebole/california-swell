@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Twenty-six years of California swell — CDIP MOP hindcast</title>
+<style>
+  :root { --bg:#0e1117; --panel:#161b22; --ink:#e6edf3; --mut:#8b949e; --acc:#58a6ff; --swell:#60b2e8; --sea:#eca85c; --line:#30363d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .head { padding:22px 24px 16px; border-bottom:1px solid var(--line); max-width:1100px; }
+  h1 { font-size:21px; margin:0 0 6px; font-weight:680; }
+  .lede { color:var(--mut); font-size:13.5px; max-width:780px; }
+  .lede b { color:var(--ink); font-weight:600; }
+  .lede .sw { color:var(--swell); font-weight:600; }
+  .lede .se { color:var(--sea); font-weight:600; }
+  .thesis { margin-top:12px; font-size:12.5px; color:var(--mut); border-left:3px solid var(--acc); padding:7px 12px; background:var(--panel); border-radius:0 8px 8px 0; max-width:780px; }
+  .nav { margin-top:12px; font-size:12.5px; }
+
+  .wrap { display:flex; align-items:stretch; flex-wrap:wrap; }
+  .stage { position:relative; flex:1 1 640px; min-height:600px; height:68vh; background:#0b0e14; overflow:hidden; touch-action:none; }
+  .stage canvas { position:absolute; inset:0; display:block; }
+  #h-ui { pointer-events:none; }
+
+  .side { flex:0 0 272px; border-left:1px solid var(--line); background:var(--panel); padding:14px 16px; display:flex; flex-direction:column; gap:14px; }
+  .grp { display:flex; flex-direction:column; gap:7px; }
+  .grp h3 { margin:0; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); font-weight:600; }
+  .row { display:flex; gap:6px; align-items:center; }
+  button, select { background:#21262d; color:var(--ink); border:1px solid var(--line); border-radius:7px; padding:6px 11px; cursor:pointer; font-size:12.5px; font-family:inherit; }
+  button:hover, select:hover { border-color:var(--acc); }
+  select { width:100%; }
+  button.on { background:#1f6feb22; border-color:var(--acc); color:var(--acc); font-weight:600; }
+  button[data-layer=swell].on { background:#60b2e822; border-color:var(--swell); color:var(--swell); }
+  button[data-layer=sea].on { background:#eca85c22; border-color:var(--sea); color:var(--sea); }
+  input[type=range] { width:100%; accent-color:var(--acc); }
+
+  #h-clock { font:600 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .badge { font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700; background:#58a6ff22; color:var(--acc); }
+  #h-sites { font-size:11.5px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #h-cov { font-size:11px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #h-cov.warn { color:var(--sea); }
+
+  #h-readout { opacity:.32; transition:opacity .12s; border-top:1px solid var(--line); padding-top:11px; }
+  #h-readout.on { opacity:1; }
+  .rd-site { font:600 13px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .rd-pos { font-size:11px; color:var(--mut); margin-bottom:9px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .band { display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-top:1px solid #30363d55; }
+  .band .nm { font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+  .band.sw .nm { color:var(--swell); } .band.se .nm { color:var(--sea); }
+  .band .v { font:600 13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+  #h-status { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#161b22ee; border:1px solid var(--line); border-radius:9px; padding:11px 17px; font-size:12.5px; display:none; z-index:9; }
+
+  .foot { padding:16px 24px 34px; color:var(--mut); font-size:12px; border-top:1px solid var(--line); max-width:1100px; }
+  .foot b { color:var(--ink); }
+  .foot p { margin:0 0 9px; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ink); background:var(--panel); padding:1px 5px; border-radius:4px; }
+  a { color:var(--acc); }
+  @media (max-width:820px) { .side { flex:1 1 100%; border-left:0; border-top:1px solid var(--line); } .stage { height:60vh; min-height:440px; } }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>Twenty-six years of California swell</h1>
+  <div class="lede">
+    The whole California coast as a fringe. Every strand is one of CDIP's
+    <b>11,594 alongshore MOP sites</b>, streaming inshore along the direction its wave energy
+    actually arrives from — <span class="sw">swell</span> and <span class="se">sea</span> drawn as
+    two independent layers, because for most of the record they are two different waves going two
+    different ways.
+  </div>
+  <div class="thesis">
+    Direction here is the band-split <b>energy flux</b>, not the mean direction. Sea and swell each
+    carry 30–70% of the flux about two thirds of the time, and their flux directions differ by 22°
+    on average — so a single mean direction is perfectly smooth and describes neither of them.
+  </div>
+  <div class="nav">← <a href="index.html">The live swell field</a> (gridded nowcast, 2-D)</div>
+</div>
+
+<div class="wrap" id="hist">
+  <div class="stage">
+    <canvas id="h-coast"></canvas>
+    <canvas id="h-fur"></canvas>
+    <canvas id="h-ui"></canvas>
+    <div id="h-status"></div>
+  </div>
+
+  <div class="side">
+    <div class="grp">
+      <div class="row"><span id="h-clock">—</span><span class="badge" id="h-kind">daily</span></div>
+      <div id="h-sites">—</div>
+      <div id="h-cov">—</div>
+      <input type="range" id="h-scrub" min="0" max="364" step="0.01" value="0" />
+      <div class="row"><button id="h-play">Pause</button></div>
+    </div>
+
+    <div class="grp">
+      <h3>Source</h3>
+      <select id="h-source"></select>
+    </div>
+
+    <div class="grp">
+      <h3>Layers</h3>
+      <div class="row">
+        <button data-layer="swell" class="on">Swell</button>
+        <button data-layer="sea" class="on">Sea</button>
+      </div>
+    </div>
+
+    <div id="h-readout">
+      <div class="rd-site">—</div>
+      <div class="rd-pos">hover the coast</div>
+      <div class="band sw"><span class="nm">Swell</span><span class="v"><span class="rd-hsw">—</span> · <span class="rd-dsw">—</span></span></div>
+      <div class="band se"><span class="nm">Sea</span><span class="v"><span class="rd-hse">—</span> · <span class="rd-dse">—</span></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <p>
+    <b>Data.</b> CDIP MOP alongshore stations — 11,594 sites across all 15 California coastal
+    counties at ~107 m median spacing. The record is continuous and hourly from 2000-01-01 to the
+    present: <code>_hindcast</code> runs to 2025-03-31 23:00 and the alongshore <code>_nowcast</code>
+    picks up at 2025-04-01 with no gap. (That switchover is the one in
+    <code>read_MOPline2.m</code>; note the alongshore <i>nowcast</i> is a rolling multi-year archive,
+    unlike the gridded nowcast, which is only a six-hour buffer.) Years are sampled daily; events
+    are hourly.
+  </p>
+  <p>
+    <b>Method.</b> For each frequency band the wave energy flux is
+    <code>ρg·Cg·a1·E</code> and <code>ρg·Cg·b1·E</code> summed over the band, following
+    <code>estimateEnergyFlux</code> in <code>read_MOPline2.m</code>, using that routine's canonical
+    bands — swell 0.02–0.0813 Hz, sea 0.09–0.400 Hz. Group speed comes from the linear dispersion
+    relation at each site's own depth. Reproducing the <i>total</i>-band flux direction matches the
+    file's own <code>waveDm</code> to a 1.80° mean offset with 1.38° residual; the small remaining
+    difference is the Cg weighting, which <code>waveDm</code> does not carry. Strand length scales
+    with √Hs, and the two layers advance at different rates because swell group speed is roughly
+    twice that of local sea.
+  </p>
+  <p>
+    <b>The yearly view is a snapshot, not a daily summary.</b> Years are sampled by taking every
+    24th hourly step, so each frame is the state at 00:00 UTC — not a daily mean and not a daily
+    maximum. Short-lived peaks are therefore attenuated: the December 2015 Humboldt event reads
+    13.5 m in the yearly view where the hourly event view reaches 14.8 m. Use an event for the peak
+    of a storm; use a year to see the season.
+  </p>
+  <p>
+    <b>Events are derived, not remembered.</b> They are chosen by ranking every day in the record
+    on the statewide 90th-percentile swell-band Hs, so an event has to be large along a broad
+    stretch of coast rather than at one exposed site, with a minimum separation so a single storm
+    cannot fill the list. Because that ranking runs on the daily snapshots, a storm peaking between
+    samples can rank below its true severity — the result is a defensible shortlist, not a
+    definitive ordering of the record.
+  </p>
+  <p>
+    <b>The Hs color and length scale is per payload.</b> Each file carries its own
+    <code>hsMax</code>, measured from its own peak, because no fixed ceiling survived contact with
+    the record — 8 m clipped January 2023 and 12 m still clipped December 2015. Physical values in
+    the readout are therefore always correct, but strand length is not comparable between a calm
+    year and a stormy one without reading the scale.
+  </p>
+  <p>
+    <b>Coverage is not uniform across the record.</b> MOP's band estimates depend on which offshore
+    buoys were feeding the model at the time, and that changed: Del Norte has no sea-band estimate
+    at all until October 2005, Humboldt carries one in about 84% of months, Santa Barbara in 100%.
+    Those gaps arrive as exactly zero energy, which once drawn is indistinguishable from flat calm —
+    so the panel reports the fraction of sites actually carrying an estimate for the frame on screen,
+    and missing sites are left blank rather than drawn at zero.
+  </p>
+  <p>
+    <b>What this is not.</b> This is a chain of points, not a field: unlike the
+    <a href="index.html">live page</a>, there is no 2-D grid to integrate through, so each strand is
+    the straight local ray at its own site rather than a refracting path. Strand pacing is scaled
+    for legibility, not real time. Every site sits at its own model depth (10 m for most), so this
+    is a nearshore quantity, not a deep-water one.
+  </p>
+</div>
+
+<script src="history.js"></script>
+</body>
+</html>

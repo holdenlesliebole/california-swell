@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The California swell field — CDIP MOP, live</title>
+<style>
+  :root { --bg:#0e1117; --panel:#161b22; --ink:#e6edf3; --mut:#8b949e; --acc:#58a6ff; --good:#3fb950; --warn:#d29922; --line:#30363d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .head { padding:22px 24px 16px; border-bottom:1px solid var(--line); max-width:1100px; }
+  h1 { font-size:21px; margin:0 0 6px; font-weight:680; }
+  .lede { color:var(--mut); font-size:13.5px; max-width:780px; }
+  .lede b { color:var(--ink); font-weight:600; }
+  .thesis { margin-top:12px; font-size:12.5px; color:var(--mut); border-left:3px solid var(--acc); padding:7px 12px; background:var(--panel); border-radius:0 8px 8px 0; max-width:780px; }
+
+  .wrap { display:flex; gap:0; align-items:stretch; flex-wrap:wrap; }
+  .stage { position:relative; flex:1 1 640px; min-height:620px; height:74vh; background:#0b0e14; cursor:grab; overflow:hidden; touch-action:none; }
+  .stage:active { cursor:grabbing; }
+  .stage canvas { position:absolute; inset:0; display:block; }
+  #l-ui { pointer-events:none; }
+
+  .side { flex:0 0 268px; border-left:1px solid var(--line); background:var(--panel); padding:14px 16px; display:flex; flex-direction:column; gap:14px; }
+  .grp { display:flex; flex-direction:column; gap:7px; }
+  .grp h3 { margin:0; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); font-weight:600; }
+  .row { display:flex; gap:6px; align-items:center; }
+  button { background:#21262d; color:var(--ink); border:1px solid var(--line); border-radius:7px; padding:6px 11px; cursor:pointer; font-size:12.5px; font-family:inherit; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:#1f6feb22; border-color:var(--acc); color:var(--acc); font-weight:600; }
+  input[type=range] { width:100%; accent-color:var(--acc); }
+
+  .clockbox { display:flex; align-items:baseline; gap:8px; }
+  #clock { font:600 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .badge { font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700; }
+  .badge.nc { background:#3fb95022; color:var(--good); }
+  .badge.fc { background:#d2992222; color:var(--warn); }
+  #domain { font-size:11.5px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+  .legwrap { display:flex; flex-direction:column; gap:3px; }
+  #legend { border-radius:3px; display:block; }
+  .legrow { display:flex; justify-content:space-between; font-size:10.5px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #leg-name { font-size:11px; color:var(--ink); }
+
+  #readout { opacity:.32; transition:opacity .12s; border-top:1px solid var(--line); padding-top:11px; }
+  #readout.on { opacity:1; }
+  .rd-pos { font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .rd-depth { font-size:11px; color:var(--mut); margin-bottom:7px; }
+  .rd-vals { display:flex; gap:12px; margin-bottom:8px; }
+  .rd-vals div { display:flex; flex-direction:column; }
+  .rd-vals span.k { font-size:9.5px; color:var(--mut); letter-spacing:.05em; text-transform:uppercase; }
+  .rd-vals span.v { font:600 14px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #spark { display:block; background:#0e1117; border:1px solid var(--line); border-radius:5px; }
+  .rd-hint { font-size:10.5px; color:var(--mut); margin-top:5px; font-style:italic; }
+
+  #status { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#161b22ee; border:1px solid var(--line); border-radius:9px; padding:11px 17px; font-size:12.5px; color:var(--ink); display:none; z-index:9; }
+
+  .foot { padding:16px 24px 34px; color:var(--mut); font-size:12px; border-top:1px solid var(--line); max-width:1100px; }
+  .foot b { color:var(--ink); }
+  .foot p { margin:0 0 9px; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ink); background:var(--panel); padding:1px 5px; border-radius:4px; }
+  a { color:var(--acc); }
+
+  @media (max-width:820px) {
+    .side { flex:1 1 100%; border-left:0; border-top:1px solid var(--line); }
+    .stage { height:58vh; min-height:420px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>The California swell field</h1>
+  <div class="lede">
+    Every strand is a <b>wave ray</b> — a path traced through the peak-direction field of
+    CDIP's MOP nearshore wave model, running live off the
+    <a href="https://thredds.cdip.ucsd.edu/thredds/catalog/catalog.html">Scripps THREDDS server</a>.
+    Strand speed is the <b>group velocity</b>, solved cell by cell from the linear dispersion
+    relation, so strands slow and crowd as they climb the shelf. Zoom into San Diego and the
+    grid sharpens from 1 km to 100 m.
+  </div>
+  <div class="thesis">
+    Where the strands converge, you are seeing refractive focusing — the same process that
+    decides which stretch of beach takes the energy out of a given swell. The pattern is the
+    physics, not the rendering.
+  </div>
+  <div style="margin-top:12px;font-size:12.5px">
+    → <a href="history.html">Twenty-six years of California swell</a>
+    (the 2000–present hindcast, as a coastal fringe)
+  </div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="stage">
+    <canvas id="l-bathy"></canvas>
+    <canvas id="l-fur"></canvas>
+    <canvas id="l-coast"></canvas>
+    <canvas id="l-ui"></canvas>
+    <div id="status"></div>
+  </div>
+
+  <div class="side" id="side">
+    <div class="grp">
+      <div class="clockbox"><span id="clock">—</span><span class="badge nc" id="kind">nowcast</span></div>
+      <div id="domain">—</div>
+      <input type="range" id="scrub" min="0" max="21" step="0.01" value="0" />
+      <div class="row"><button id="play">Pause</button><button id="reset">Whole coast</button><button id="gosd">San Diego</button></div>
+    </div>
+
+    <div class="grp">
+      <h3>Color by</h3>
+      <div class="row">
+        <button data-scalar="hs" class="on">Height</button>
+        <button data-scalar="tp">Period</button>
+        <button data-scalar="dp">Direction</button>
+      </div>
+      <div class="legwrap">
+        <span id="leg-name">Significant wave height</span>
+        <canvas id="legend"></canvas>
+        <div class="legrow"><span id="leg-lo">—</span><span id="leg-hi">—</span></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>Strand density</h3>
+      <input type="range" id="density" min="0.25" max="2" step="0.05" value="1" />
+    </div>
+
+    <div id="readout">
+      <div class="rd-pos">—</div>
+      <div class="rd-depth">—</div>
+      <div class="rd-vals">
+        <div><span class="k">Hs</span><span class="v rd-hs">—</span></div>
+        <div><span class="k">Tp</span><span class="v rd-tp">—</span></div>
+        <div><span class="k">Dp</span><span class="v rd-dp">—</span></div>
+      </div>
+      <canvas id="spark"></canvas>
+      <div class="rd-hint">hover the map</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <p>
+    <b>Data.</b> CDIP MOP gridded nowcast + forecast — <code>CA_0.01</code> statewide at ~1 km
+    and <code>D_0.001</code> for San Diego at ~100 m, each carrying Hs, Tp and Dp on a lat/lon
+    grid. The window is a rolling ~22 hours: about six hours of analysis behind the present and
+    sixteen ahead, with the boundary marked on the time series and in the nowcast/forecast badge.
+  </p>
+  <p>
+    <b>Method.</b> Strand direction is the local peak direction Dp, so in the geometric-optics
+    limit the strands are wave rays. Speed is the group velocity from the linear dispersion
+    relation, with the wavenumber from Guo's (2002) explicit fit (~0.75% error) — no iteration,
+    which keeps it cheap enough to run per particle per frame. Time is interpolated between
+    hourly fields on the vector components rather than the angle, so there is no artifact at the
+    0/360° seam. Coastline and the model-domain edge are separated by depth at the mask boundary,
+    which a flood fill cannot do: the MOP domains are staircases of nested boxes, and at every
+    step corner the offshore padding abuts the continent directly.
+  </p>
+  <p>
+    <b>Strands fade out across bimodal fronts.</b> Dp is a <i>peak</i> statistic, so where a
+    decaying swell and a rising wind sea carry comparable energy, the spectral peak flips between
+    the two systems from one cell to the next and Dp jumps tens of degrees across a sharp front —
+    cells either side differ in Tp by about 6 s, against 0.05 s elsewhere, which is the giveaway
+    that this is two wave systems trading places rather than noise. Smoothing Dp would be worse
+    than the disease: the average of two distinct wave systems is a direction in which no wave is
+    travelling. Instead the local directional coherence is measured and the field is allowed to go
+    quiet where a single direction stops describing the sea. On a bimodal frame that touches
+    roughly 5–8% of cells and on a clean one about 1%; smooth refraction gradients score at the
+    top of the scale and are drawn in full.
+  </p>
+  <p>
+    <b>What this is not.</b> Strands are <i>rays</i>, not water-particle trajectories and not
+    the orbital motion under a wave — nothing here is advecting a physical parcel. Ray convergence
+    indicates focusing, but this is a visualization, not a ray solver: it traces an already-computed
+    Dp field rather than integrating the eikonal equation, so caustics are implied, not resolved.
+    Strand pacing is scaled for legibility, not real time. Color ranges are percentile-clipped
+    per build, so a calm summer day and a winter event are not on a common scale.
+  </p>
+  <p>
+    <b>Build.</b> THREDDS sends no CORS header, so the page cannot read OPeNDAP directly. A build
+    step (<code>build/build_data.py</code>) pulls the grids, merges nowcast with forecast, and
+    quantizes Hs/Tp/Dp to one byte over a wet-cell mask — 0.5 MB for the state, 1.4 MB for San
+    Diego, the latter fetched only when you zoom in. Renderer is plain JavaScript, no
+    dependencies, no build step.
+  </p>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
