@@ -51,8 +51,30 @@ TP_MAX = 25.5    # s,  -> 0.1 s per level
 DP_MAX = 360.0   # deg, -> 1.41 deg per level
 DEPTH_LOG_MIN, DEPTH_LOG_MAX = 0.0, 3.7  # log10 m, 1 m to ~5000 m
 
+# The statewide grid plus every county grid CDIP publishes. Together the county
+# grids tile the coast continuously from the Mexican border to Oregon, so the
+# page can zoom to 100-200 m anywhere rather than only off San Diego. They are
+# fetched one at a time, on zoom, so the total on disk is not what any visitor
+# downloads.
+#
+# The 0.002-degree northern grids are ~200 m and the 0.001-degree southern ones
+# ~100 m; decim is 1 throughout because these are already the fine products.
 DOMAINS = {
     "ca": dict(stem="CA_0.01", label="California", decim=2),
+    "dn": dict(stem="DN_0.002", label="Del Norte", decim=1),
+    "hu": dict(stem="HU_0.002", label="Humboldt", decim=1),
+    "mn": dict(stem="M_0.002", label="Mendocino", decim=1),
+    "sn": dict(stem="SN_0.002", label="Sonoma", decim=1),
+    "ma": dict(stem="MA_0.002", label="Marin", decim=1),
+    "sf": dict(stem="SF_0.002", label="San Francisco", decim=1),
+    "sm": dict(stem="SM_0.002", label="San Mateo", decim=1),
+    "sc": dict(stem="SC_0.002", label="Santa Cruz", decim=1),
+    "mo": dict(stem="MO_0.002", label="Monterey", decim=1),
+    "sl": dict(stem="SL_0.002", label="San Luis Obispo", decim=1),
+    "sb": dict(stem="B_0.001", label="Santa Barbara", decim=1),
+    "ve": dict(stem="VE_0.001", label="Ventura", decim=1),
+    "la": dict(stem="L_0.001", label="Los Angeles", decim=1),
+    "oc": dict(stem="OC_0.001", label="Orange", decim=1),
     "sd": dict(stem="D_0.001", label="San Diego", decim=1),
 }
 
@@ -239,9 +261,24 @@ def main() -> int:
     args = ap.parse_args()
 
     built = [build(d, args.out) for d in args.domains]
+
+    def summary(m):
+        g = m["grid"]
+        # The page needs each domain's footprint and resolution to decide what
+        # to load *before* loading it, so carry them in the index.
+        return {
+            "id": m["id"], "label": m["label"], "source": m["source"],
+            "bytes": m["bytes"], "nt": len(m["times"]),
+            "dlon": g["dlon"],
+            "bbox": {
+                "lonMin": g["lon0"], "lonMax": g["lon0"] + g["nx"] * g["dlon"],
+                "latMin": g["lat0"], "latMax": g["lat0"] + g["ny"] * g["dlat"],
+            },
+        }
+
     index = {
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "domains": [{k: m[k] for k in ("id", "label", "source", "times", "bytes")} for m in built],
+        "domains": [summary(m) for m in built],
     }
     (args.out / "index.json").write_text(json.dumps(index, indent=2) + "\n")
     log("done")

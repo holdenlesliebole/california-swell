@@ -218,6 +218,36 @@ def band_flux(E, a1, b1, f, df, cg, band):
 # ------------------------------------------------------------------ fetch
 
 
+def read_site_live(name: str, t0: dt.datetime, t1: dt.datetime):
+    """Read the live window from the alongshore *forecast* file alone.
+
+    That file spans roughly now-3d to now+6d, so it covers the whole live window
+    on its own -- no hindcast/nowcast merge, and no seam to get wrong. This is
+    the only MOP product that carries per-frequency energy and the a1/b1
+    directional moments over the present, which is what makes a sea/swell split
+    possible at all: the gridded products publish bulk Hs/Tp/Dp/Ta only.
+    """
+    d = nc.Dataset(f"{DODS}/MOP_alongshore/{name}_forecast.nc")
+    try:
+        tv = np.asarray(d["waveTime"][:]).astype(np.int64)
+        sel = np.flatnonzero((tv >= t0.timestamp()) & (tv <= t1.timestamp()))
+        if not len(sel):
+            return None
+        sl = slice(int(sel[0]), int(sel[-1]) + 1)
+        freq = np.asarray(d["waveFrequency"][:], dtype=float)
+        fb = np.asarray(d["waveFrequencyBounds"][:], dtype=float)
+        return (
+            tv[sl],
+            np.ma.filled(d["waveEnergyDensity"][sl, :], 0.0).astype(np.float32),
+            np.ma.filled(d["waveA1Value"][sl, :], 0.0).astype(np.float32),
+            np.ma.filled(d["waveB1Value"][sl, :], 0.0).astype(np.float32),
+            freq, np.abs(fb[:, 1] - fb[:, 0]),
+            float(np.ravel(d["metaWaterDepth"][:])[0]),
+        )
+    finally:
+        d.close()
+
+
 def read_site(name: str, t0: dt.datetime, t1: dt.datetime, stride: int):
     """Read one site over [t0, t1], spanning the hindcast/nowcast handoff.
 
@@ -267,9 +297,9 @@ def read_site(name: str, t0: dt.datetime, t1: dt.datetime, stride: int):
     return t, E, a1, b1, freq, df, depth
 
 
-def site_bands(name, t0, t1, stride):
+def site_bands(name, t0, t1, stride, live=False):
     """Per-site band-split Hs and flux direction, or None if the site is empty."""
-    got = read_site(name, t0, t1, stride)
+    got = read_site_live(name, t0, t1) if live else read_site(name, t0, t1, stride)
     if got is None:
         return None
     t, E, a1, b1, f, df, depth = got
@@ -281,10 +311,10 @@ def site_bands(name, t0, t1, stride):
 
 def _worker(job):
     """Module-level so it can be pickled to a worker process (see gather)."""
-    i, name, t0, t1, stride = job
+    i, name, t0, t1, stride, live = job
     for attempt in range(3):
         try:
-            return i, site_bands(name, t0, t1, stride)
+            return i, site_bands(name, t0, t1, stride, live)
         except Exception as exc:
             if attempt == 2:
                 log(f"  {name}: giving up ({exc.__class__.__name__}: {exc})")
@@ -292,7 +322,7 @@ def _worker(job):
             time.sleep(2 + 3 * attempt)
 
 
-def gather(names, t0, t1, stride, label):
+def gather(names, t0, t1, stride, label, live=False):
     """Fetch every site concurrently and align them onto a common time axis.
 
     Processes, not threads. netCDF4's OPeNDAP backend is not thread-safe --
@@ -304,7 +334,7 @@ def gather(names, t0, t1, stride, label):
     out = [None] * len(names)
     done = [0]
     t_start = time.time()
-    jobs = [(i, names[i], t0, t1, stride) for i in range(len(names))]
+    jobs = [(i, names[i], t0, t1, stride, live) for i in range(len(names))]
 
     with cf.ProcessPoolExecutor(WORKERS) as ex:
         for i, res in ex.map(_worker, jobs, chunksize=4):
@@ -484,6 +514,13 @@ def pick_events(out, top, min_gap_days=20):
 
 
 def build_event(slug, stride, out, days=7):
+    # Each event is ~11 minutes of THREDDS round-trips, so widening the event
+    # list should not rebuild the ones already on disk.
+    done = out / "history" / "events" / f"{slug}.json"
+    if done.exists() and json.loads(done.read_text()).get("siteStride") == stride:
+        log(f"event {slug}: already built, skipping")
+        return
+
     sites = load_sites(out)
     names = sites["name"][::stride]
     peak = dt.datetime.strptime(slug, "%Y-%m-%d").replace(tzinfo=dt.timezone.utc)
@@ -500,13 +537,40 @@ def build_event(slug, stride, out, days=7):
     }, raw)
 
 
+def build_live(stride, out, back_h=6, fwd_h=16):
+    """Bake the current sea/swell split along the coast.
+
+    The live page's grid can show a 2-D field but not a band split -- the
+    gridded products carry only bulk Hs/Tp/Dp/Ta, with no per-frequency energy
+    and no directional moments. The alongshore stations do carry spectra, so the
+    split has to come from them, drawn as a coastal fringe over the field.
+
+    The window is aligned to the gridded page: a few hours behind the present
+    and sixteen ahead.
+    """
+    sites = load_sites(out)
+    names = sites["name"][::stride]
+    now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    t0, t1 = now - dt.timedelta(hours=back_h), now + dt.timedelta(hours=fwd_h)
+    log(f"live split: {len(names)} sites (every {stride}), {t0:%m-%d %H:%M} -> {t1:%m-%d %H:%M} UTC")
+
+    out_rows, common = gather(names, t0, t1, 1, "live", live=True)
+    raw, nvalid, hs_max = pack(out_rows, common, names)
+    emit(out / "live_bands", {
+        "kind": "live", "siteStride": stride,
+        "nsites": len(names), "nvalid": nvalid, "hsMax": hs_max,
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "times": [int(t) for t in common],
+    }, raw)
+
+
 # ------------------------------------------------------------------ cli
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["sites", "overview", "events", "event"])
+    ap.add_argument("cmd", choices=["sites", "overview", "events", "event", "live"])
     ap.add_argument("--years", default="2000-2026")
     ap.add_argument("--stride", type=int, default=8)
     ap.add_argument("--slug")
@@ -521,6 +585,8 @@ def main() -> int:
         build_overview(list(range(lo, hi + 1)), a.stride, a.out)
     elif a.cmd == "events":
         pick_events(a.out, a.top)
+    elif a.cmd == "live":
+        build_live(a.stride, a.out)
     elif a.cmd == "event":
         if not a.slug:
             ap.error("--slug is required")

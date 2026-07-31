@@ -6,8 +6,8 @@ ES2020 and canvas.
 
 | page | what it is |
 |---|---|
-| `index.html` | **Live 2-D field.** Gridded nowcast + forecast, statewide (~1 km) zooming to San Diego (~100 m). Refreshed every six hours by a scheduled Action. |
-| `history.html` | **The 2000–present hindcast** as a two-layer coastal fringe: 11,594 alongshore MOP sites, swell and sea drawn separately. 27 years daily plus 6 events hourly. |
+| `index.html` | **Live 2-D field.** Gridded nowcast + forecast over all sixteen grids — statewide at ~2 km, zooming to any county at ~100–200 m. Optional coastal sea/swell fringe. |
+| `history.html` | **The 2000–present hindcast** as a two-layer coastal fringe: 11,594 alongshore MOP sites, swell and sea drawn separately. 27 years daily plus 20 events hourly. |
 
 Data is CDIP's, which is public; the code and the derived payloads are what this
 repo adds. Everything here is reproducible from `build/` against THREDDS.
@@ -20,12 +20,28 @@ refractive focusing rather than a rendering artifact. Strand *speed* is the wave
 group velocity, solved per cell from the linear dispersion relation, so strands
 slow and crowd as they shoal.
 
-Two grids, with the fine one fetched only on zoom:
+Sixteen grids, fetched one at a time on zoom — 11.9 MB in total, but a visitor
+only ever downloads the statewide grid plus whichever county they look at:
 
-| Domain | Source | Grid | Resolution | Payload |
-|---|---|---|---:|---:|
-| California | `CA_0.01` | 500 × 400 (decimated 2×) | ~2 km | 0.53 MB |
-| San Diego | `D_0.001` | 900 × 500 | ~100 m | 1.36 MB |
+| tier | grids | resolution | payload each |
+|---|---|---|---:|
+| statewide | `CA_0.01`, decimated 2× | ~2 km | 0.51 MB |
+| northern counties | `DN` `HU` `M` `SN` `MA` `SF` `SM` `SC` `MO` `SL` | ~200 m | 0.18–0.72 MB |
+| southern counties | `B` `VE` `L` `OC` `D` | ~100 m | 0.92–2.54 MB |
+
+Together the county grids tile the coast continuously from the Mexican border to
+Oregon.
+
+**A band split is not possible from the grids.** They publish bulk
+`Hs/Tp/Dp/Ta` only: the `waveFrequency` dimension is present but no data
+variable references it, so there is no per-frequency energy and no
+`a1`/`b1` to partition — at any resolution. Publishing spectra on the grid would
+cost ~54 MB per time step for San Diego alone and ~4.9 GB per run statewide,
+which is presumably why it is not done. The alongshore stations *do* carry
+spectra, so the live page's sea/swell fringe is computed there
+(`build_hindcast.py live`) and drawn as discrete coastal vectors over the field
+rather than blended into it. It updates every three hours, the alongshore
+forecast's own cadence.
 
 ## Why there is a build step
 
@@ -76,8 +92,9 @@ than reinvent it.
 ```bash
 python build/build_hindcast.py sites                          # one HTTP request
 python build/build_hindcast.py overview --years 2000-2026 --stride 8
-python build/build_hindcast.py events --top 6                 # derived, not remembered
+python build/build_hindcast.py events --top 20                # derived, not remembered
 python build/build_hindcast.py event --slug 2023-01-06 --stride 4
+python build/build_hindcast.py live --stride 4                # coastal sea/swell split
 ```
 
 Overview years are skipped if already built, so a long run can just be

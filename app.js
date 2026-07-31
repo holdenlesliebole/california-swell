@@ -81,6 +81,23 @@ const invMercY = (y) => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) / DEG;
 
 // ---------------------------------------------------------------- payload
 
+/** Fetch a .bin.gz, transparently handling servers that pre-decompress it. */
+async function fetchGz(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  let buf = await res.arrayBuffer();
+  const h = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+  if (h[0] === 0x1f && h[1] === 0x8b) {
+    if (typeof DecompressionStream !== 'function') {
+      throw new Error('This browser cannot decompress the data.');
+    }
+    buf = await new Response(
+      new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))
+    ).arrayBuffer();
+  }
+  return buf;
+}
+
 /** Decode one domain's .bin.gz into typed arrays plus a scatter index. */
 async function loadDomain(meta, onProgress) {
   const res = await fetch(`data/${meta.id}.bin.gz`);
@@ -311,6 +328,7 @@ class SwellView {
       bathy: root.querySelector('#l-bathy'),
       fur: root.querySelector('#l-fur'),
       coast: root.querySelector('#l-coast'),
+      bands: root.querySelector('#l-bands'),
       ui: root.querySelector('#l-ui'),
     };
     this.ctx = {};
@@ -449,6 +467,7 @@ class SwellView {
     this.domains.ca = await loadDomain(meta);
     this.active = this.domains.ca;
 
+    this._buildCountyPicker();
     this.resize();
     this.setView(this.active.bbox);
     this._buildParticles();
@@ -534,32 +553,44 @@ class SwellView {
 
   // --- domain switching -------------------------------------------------
 
+  /** The county grid whose footprint contains a point, if any. */
+  _countyAt(lon, lat) {
+    let best = null, bestArea = Infinity;
+    for (const m of this.index.domains) {
+      if (m.id === 'ca') continue;
+      const b = m.bbox;
+      if (lon <= b.lonMin || lon >= b.lonMax || lat <= b.latMin || lat >= b.latMax) continue;
+      // County footprints overlap slightly at their shared edges; prefer the
+      // smaller one so a point near a boundary lands in the tighter grid.
+      const area = (b.lonMax - b.lonMin) * (b.latMax - b.latMin);
+      if (area < bestArea) { bestArea = area; best = m; }
+    }
+    return best;
+  }
+
   async _maybeSwitchDomain() {
-    const sd = this.metas.sd;
-    if (!sd || this.loadingDetail) return;
+    if (this.loadingDetail) return;
 
     const [lonC, latC] = this.toLonLat(this.cssW / 2, this.cssH / 2);
-    const b = this.domains.sd ? this.domains.sd.bbox
-      : { lonMin: -117.6, lonMax: -117.1, latMin: 32.5, latMax: 33.4 };
-    const inside = lonC > b.lonMin && lonC < b.lonMax && latC > b.latMin && latC < b.latMax;
+    const county = this._countyAt(lonC, latC);
     // Switch on the coarse grid's own resolution, not on the view's width in
     // degrees: a wide, short viewport can be very zoomed in and still span a
-    // lot of longitude. Once a 1 km cell covers more than a couple of screen
-    // pixels the statewide grid is visibly blocking, which is exactly where the
-    // 100 m grid starts to pay for itself. The two thresholds are hysteresis,
+    // lot of longitude. Once a statewide cell covers more than a couple of
+    // screen pixels that grid is visibly blocking, which is exactly where the
+    // county grid starts to pay for itself. The two thresholds are hysteresis,
     // so a view sitting near the boundary does not flap between grids.
     const coarsePx = this.pxPerCell(this.domains.ca);
-    const onSd = this.active.meta.id === 'sd';
+    const onCounty = this.active.meta.id !== 'ca';
 
-    if (inside && coarsePx > 2.6 && !onSd) {
-      if (!this.domains.sd) {
+    if (county && coarsePx > 2.6 && this.active.meta.id !== county.id) {
+      if (!this.domains[county.id]) {
         this.loadingDetail = true;
-        this._status(`loading San Diego detail — ${(sd.bytes.gz / 1e6).toFixed(2)} MB`);
+        this._status(`loading ${county.label} — ${(county.bytes.gz / 1e6).toFixed(2)} MB`);
         try {
-          const meta = await (await fetch('data/sd.json')).json();
-          this.domains.sd = await loadDomain(meta);
+          const meta = await (await fetch(`data/${county.id}.json`)).json();
+          this.domains[county.id] = await loadDomain(meta);
         } catch (err) {
-          this._status(`detail grid failed: ${err.message}`);
+          this._status(`${county.label} grid failed: ${err.message}`);
           setTimeout(() => this._status(null), 4000);
           this.loadingDetail = false;
           return;
@@ -567,8 +598,8 @@ class SwellView {
         this._status(null);
         this.loadingDetail = false;
       }
-      this._setActive(this.domains.sd);
-    } else if (onSd && (!inside || coarsePx < 1.7)) {
+      this._setActive(this.domains[county.id]);
+    } else if (onCounty && (!county || coarsePx < 1.7)) {
       this._setActive(this.domains.ca);
     }
   }
@@ -600,6 +631,7 @@ class SwellView {
     this._rebuildVisible();
     this._drawBathy();
     this._drawCoast();
+    this._drawBands();
     this._clearFur();
   }
 
@@ -679,6 +711,109 @@ class SwellView {
     }
   }
 
+  // --- sea / swell at the coast ----------------------------------------
+
+  /**
+   * Load the coastal band split.
+   *
+   * This cannot come from the grid. The gridded MOP products publish bulk
+   * Hs/Tp/Dp/Ta only -- their waveFrequency dimension carries no data variable,
+   * so there is no per-frequency energy and no a1/b1 to partition. The
+   * alongshore stations do carry spectra, so the split is computed there and
+   * drawn as a fringe over the field. The two sources are different products,
+   * which is exactly why the fringe is drawn as discrete vectors rather than
+   * blended into the fur.
+   */
+  async _loadBands() {
+    if (this.bands) return true;
+    this._status('loading coastal sea/swell split…');
+    try {
+      const meta = await (await fetch('data/live_bands.json')).json();
+      const sm = await (await fetch('data/sites.json')).json();
+      const sbuf = await fetchGz('data/sites.bin.gz');
+      const buf = await fetchGz('data/live_bands.bin.gz');
+      const ns = meta.nsites, nt = meta.times.length;
+      const need = ns + nt * 4 * ns;
+      if (buf.byteLength !== need) {
+        throw new Error(`payload ${buf.byteLength} B, expected ${need} B`);
+      }
+      const n = sm.n;
+      const frames = [];
+      for (let k = 0; k < nt; k++) {
+        const o = ns + k * 4 * ns;
+        frames.push({
+          hsw: new Uint8Array(buf, o, ns), dsw: new Uint8Array(buf, o + ns, ns),
+          hse: new Uint8Array(buf, o + 2 * ns, ns), dse: new Uint8Array(buf, o + 3 * ns, ns),
+        });
+      }
+      this.bands = {
+        meta, frames,
+        valid: new Uint8Array(buf, 0, ns),
+        lat: new Float32Array(sbuf, 0, n),
+        lon: new Float32Array(sbuf, 4 * n, n),
+        stride: meta.siteStride,
+        ns,
+      };
+      this._status(null);
+      return true;
+    } catch (err) {
+      this._status(`sea/swell split failed: ${err.message}`);
+      setTimeout(() => this._status(null), 4000);
+      return false;
+    }
+  }
+
+  /** Nearest band frame to the grid's current instant. */
+  _bandFrame() {
+    const want = this.active.meta.times[Math.round(this.tf)];
+    const t = this.bands.meta.times;
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < t.length; i++) {
+      const d = Math.abs(t[i] - want);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  _drawBands() {
+    const ctx = this.ctx.bands;
+    ctx.clearRect(0, 0, this.cssW, this.cssH);
+    if (!this.showBands || !this.bands) return;
+
+    const B = this.bands;
+    const F = B.frames[this._bandFrame()];
+    const hm = B.meta.hsMax;
+    // Long enough to read against the fur, short enough not to smother it.
+    const LEN = 26;
+
+    // Thin by on-screen spacing. The sites are ~430 m apart, so zoomed into one
+    // county they would otherwise stack into a solid band and bury the field
+    // this overlay is meant to annotate. Target roughly one vector per 11 px.
+    const spacingPx = 430 * this.view.s * DEG / 111320;
+    const step = Math.max(1, Math.round(11 / Math.max(spacingPx, 0.01)));
+
+    for (const [key, dkey, col] of [['hsw', 'dsw', 'rgba(96,178,232,0.95)'],
+                                    ['hse', 'dse', 'rgba(236,168,92,0.95)']]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      for (let c = 0; c < B.ns; c += step) {
+        if (!B.valid[c]) continue;
+        const site = c * B.stride;
+        const [x, y] = this.toScreen(B.lon[site], B.lat[site]);
+        if (x < -30 || y < -30 || x > this.cssW + 30 || y > this.cssH + 30) continue;
+        const hs = F[key][c] / 255 * hm;
+        if (hs < 0.05) continue;
+        const th = F[dkey][c] / 255 * 360 * DEG;
+        // Compass bearing the energy comes FROM; screen y runs south.
+        const L = LEN * Math.sqrt(hs);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.sin(th) * L, y - Math.cos(th) * L);
+      }
+      ctx.stroke();
+    }
+  }
+
   // --- animation --------------------------------------------------------
 
   /**
@@ -715,6 +850,10 @@ class SwellView {
         this._syncTime();
       }
       this._advect(dt);
+      if (this.showBands) {
+        const bf = this._bandFrame();
+        if (bf !== this._lastBandFrame) { this._lastBandFrame = bf; this._drawBands(); }
+      }
       this._drawReadout();
       requestAnimationFrame(step);
     };
@@ -1021,10 +1160,32 @@ class SwellView {
   _syncChrome() {
     const d = this.active;
     this.root.querySelector('#scrub').max = String(d.nt - 1);
-    this.root.querySelector('#domain').textContent =
-      d.meta.id === 'sd' ? 'San Diego · ~100 m' : 'California · ~1 km';
+    // Resolution is read from the grid spacing itself — which already reflects
+    // any decimation applied at build time — so adding a county needs no
+    // matching change here.
+    // Rounded to a readable step rather than the literal spacing: 0.002 deg is
+    // 223 m of latitude, but the product is universally called 200 m.
+    const raw = d.meta.grid.dlon * 111320;
+    const m = raw >= 1000 ? Math.round(raw / 500) * 500 : Math.round(raw / 50) * 50;
+    const res = m >= 1000 ? `~${(m / 1000).toFixed(m % 1000 ? 1 : 0)} km` : `~${m} m`;
+    this.root.querySelector('#domain').textContent = `${d.meta.label} · ${res}`;
     this._syncTime();
     this._legend();
+  }
+
+  /** Counties, ordered north to south, from the index alone. */
+  _buildCountyPicker() {
+    const sel = this.root.querySelector('#county');
+    const counties = this.index.domains
+      .filter((d) => d.id !== 'ca')
+      .sort((a, b) => b.bbox.latMax - a.bbox.latMax);
+    sel.innerHTML = '<option value="">Zoom to county…</option>';
+    for (const c of counties) {
+      const o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = `${c.label} · ${(c.bytes.gz / 1e6).toFixed(1)} MB`;
+      sel.appendChild(o);
+    }
   }
 
   _legend() {
@@ -1122,6 +1283,19 @@ class SwellView {
       });
     });
 
+    this.root.querySelector('#bands').addEventListener('click', async (e) => {
+      const b = e.currentTarget;
+      if (!this.showBands) {
+        b.textContent = 'loading…';
+        if (!(await this._loadBands())) { b.textContent = 'Off'; return; }
+      }
+      this.showBands = !this.showBands;
+      b.textContent = this.showBands ? 'On' : 'Off';
+      b.classList.toggle('on', this.showBands);
+      this._lastBandFrame = -1;
+      this._drawBands();
+    });
+
     this.root.querySelector('#density').addEventListener('input', (e) => {
       this.density = parseFloat(e.target.value);
       this._buildParticles();
@@ -1133,10 +1307,20 @@ class SwellView {
       this.pinned = null;
     });
 
-    this.root.querySelector('#gosd').addEventListener('click', async () => {
-      this.setView({ lonMin: -117.60, lonMax: -117.10, latMin: 32.50, latMax: 33.40 });
+    this.root.querySelector('#county').addEventListener('change', async (e) => {
+      const m = this.index.domains.find((d) => d.id === e.target.value);
+      if (!m) return;
+      const b = m.bbox;
+      // Pad the county box so the zoom lands inside the switch threshold and
+      // the fur is not pressed against the frame.
+      const padLon = (b.lonMax - b.lonMin) * 0.04, padLat = (b.latMax - b.latMin) * 0.04;
+      this.setView({
+        lonMin: b.lonMin - padLon, lonMax: b.lonMax + padLon,
+        latMin: b.latMin - padLat, latMax: b.latMax + padLat,
+      });
       await this._maybeSwitchDomain();
     });
+
 
     let rt;
     window.addEventListener('resize', () => {

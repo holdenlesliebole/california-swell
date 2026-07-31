@@ -28,12 +28,16 @@
   button:hover { border-color:var(--acc); }
   button.on { background:#1f6feb22; border-color:var(--acc); color:var(--acc); font-weight:600; }
   input[type=range] { width:100%; accent-color:var(--acc); }
+  select { width:100%; background:#21262d; color:var(--ink); border:1px solid var(--line); border-radius:7px; padding:6px 9px; font-size:12.5px; font-family:inherit; cursor:pointer; }
+  select:hover { border-color:var(--acc); }
 
   .clockbox { display:flex; align-items:baseline; gap:8px; }
   #clock { font:600 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; }
   .badge { font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700; }
   .badge.nc { background:#3fb95022; color:var(--good); }
   .badge.fc { background:#d2992222; color:var(--warn); }
+  #bands-note { font-size:10.5px; color:var(--mut); font-style:italic; line-height:1.35; }
+  button#bands.on { background:#60b2e822; border-color:#60b2e8; color:#60b2e8; }
   #domain { font-size:11.5px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
 
   .legwrap { display:flex; flex-direction:column; gap:3px; }
@@ -75,8 +79,8 @@
     CDIP's MOP nearshore wave model, running live off the
     <a href="https://thredds.cdip.ucsd.edu/thredds/catalog/catalog.html">Scripps THREDDS server</a>.
     Strand speed is the <b>group velocity</b>, solved cell by cell from the linear dispersion
-    relation, so strands slow and crowd as they climb the shelf. Zoom into San Diego and the
-    grid sharpens from 1 km to 100 m.
+    relation, so strands slow and crowd as they climb the shelf. Zoom anywhere on the coast and the
+    grid sharpens from ~2 km to the county products at ~100–200 m.
   </div>
   <div class="thesis">
     Where the strands converge, you are seeing refractive focusing — the same process that
@@ -94,6 +98,7 @@
     <canvas id="l-bathy"></canvas>
     <canvas id="l-fur"></canvas>
     <canvas id="l-coast"></canvas>
+    <canvas id="l-bands"></canvas>
     <canvas id="l-ui"></canvas>
     <div id="status"></div>
   </div>
@@ -103,7 +108,8 @@
       <div class="clockbox"><span id="clock">—</span><span class="badge nc" id="kind">nowcast</span></div>
       <div id="domain">—</div>
       <input type="range" id="scrub" min="0" max="21" step="0.01" value="0" />
-      <div class="row"><button id="play">Pause</button><button id="reset">Whole coast</button><button id="gosd">San Diego</button></div>
+      <div class="row"><button id="play">Pause</button><button id="reset">Whole coast</button></div>
+      <select id="county"></select>
     </div>
 
     <div class="grp">
@@ -118,6 +124,12 @@
         <canvas id="legend"></canvas>
         <div class="legrow"><span id="leg-lo">—</span><span id="leg-hi">—</span></div>
       </div>
+    </div>
+
+    <div class="grp">
+      <h3>Sea &amp; swell at the coast</h3>
+      <div class="row"><button id="bands">Off</button></div>
+      <div id="bands-note">from the alongshore stations &mdash; the grids carry no spectra</div>
     </div>
 
     <div class="grp">
@@ -141,10 +153,15 @@
 
 <div class="foot">
   <p>
-    <b>Data.</b> CDIP MOP gridded nowcast + forecast — <code>CA_0.01</code> statewide at ~1 km
-    and <code>D_0.001</code> for San Diego at ~100 m, each carrying Hs, Tp and Dp on a lat/lon
-    grid. The window is a rolling ~22 hours: about six hours of analysis behind the present and
-    sixteen ahead, with the boundary marked on the time series and in the nowcast/forecast badge.
+    <b>Data.</b> CDIP MOP gridded nowcast + forecast. <code>CA_0.01</code> covers the state at
+    ~1 km and is shipped decimated 2× to ~2 km, which is ample at that zoom; all fifteen county grids are available beneath it — <code>DN</code>, <code>HU</code>,
+    <code>M</code>, <code>SN</code>, <code>MA</code>, <code>SF</code>, <code>SM</code>,
+    <code>SC</code>, <code>MO</code>, <code>SL</code> at ~200 m and <code>B</code>,
+    <code>VE</code>, <code>L</code>, <code>OC</code>, <code>D</code> at ~100 m — so the coast is
+    covered continuously from the Mexican border to Oregon. Only the county you are looking at is
+    fetched, one at a time. The window is a rolling ~22 hours: about six hours of analysis behind
+    the present and sixteen ahead, with the boundary marked on the time series and in the
+    nowcast/forecast badge.
   </p>
   <p>
     <b>Method.</b> Strand direction is the local peak direction Dp, so in the geometric-optics
@@ -175,6 +192,17 @@
     Dp field rather than integrating the eikonal equation, so caustics are implied, not resolved.
     Strand pacing is scaled for legibility, not real time. Color ranges are percentile-clipped
     per build, so a calm summer day and a winter event are not on a common scale.
+  </p>
+  <p>
+    <b>Sea and swell come from a different product.</b> The gridded files publish bulk
+    Hs/Tp/Dp/Ta only — their <code>waveFrequency</code> dimension carries no data variable, so
+    there is no per-frequency energy and no <code>a1</code>/<code>b1</code> with which to
+    partition a spectrum. A band split is therefore impossible from the grid, at any resolution.
+    The alongshore MOP stations do carry spectra, so the split is computed there — swell
+    0.02–0.0813 Hz, sea 0.09–0.400 Hz, direction from the band energy flux — and drawn as a
+    coastal fringe over the field. Because the two are genuinely different products, the fringe is
+    drawn as discrete vectors rather than blended into the fur, and it updates every three hours
+    rather than hourly, which is the alongshore forecast's own cadence.
   </p>
   <p>
     <b>Build.</b> THREDDS sends no CORS header, so the page cannot read OPeNDAP directly. A build
