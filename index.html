@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The California swell field — CDIP MOP, live</title>
+<title>The California swell field: CDIP MOP, live</title>
 <style>
   :root { --bg:#0e1117; --panel:#161b22; --ink:#e6edf3; --mut:#8b949e; --acc:#58a6ff; --good:#3fb950; --warn:#d29922; --line:#30363d; }
   * { box-sizing: border-box; }
@@ -76,7 +76,7 @@
 <div class="head">
   <h1>The California swell field</h1>
   <div class="lede">
-    Every strand is a <b>wave ray</b> — a path traced through the peak-direction field of
+    Every strand is a <b>wave ray</b>, a path traced through the peak-direction field of
     CDIP's MOP nearshore wave model, running live off the
     <a href="https://thredds.cdip.ucsd.edu/thredds/catalog/catalog.html">Scripps THREDDS server</a>.
     Strand speed is the <b>group velocity</b>, solved cell by cell from the linear dispersion
@@ -84,7 +84,7 @@
     grid sharpens from ~2 km to the county products at ~100–200 m.
   </div>
   <div class="thesis">
-    Where the strands converge, you are seeing refractive focusing — the same process that
+    Where the strands converge, you are seeing refractive focusing, the same process that
     decides which stretch of beach takes the energy out of a given swell. The pattern is the
     physics, not the rendering.
   </div>
@@ -155,14 +155,14 @@
 <div class="foot">
   <p>
     <b>Data.</b> CDIP MOP gridded nowcast + forecast. <code>CA_0.01</code> covers the state at
-    ~1 km and is shipped decimated 2× to ~2 km, which is ample at that zoom; all fifteen county grids are available beneath it — <code>DN</code>, <code>HU</code>,
+    ~1 km and is shipped decimated 2× to ~2 km, which is ample at that zoom; all fifteen county grids are available beneath it: <code>DN</code>, <code>HU</code>,
     <code>M</code>, <code>SN</code>, <code>MA</code>, <code>SF</code>, <code>SM</code>,
     <code>SC</code>, <code>MO</code>, <code>SL</code> at ~200 m and <code>B</code>,
-    <code>VE</code>, <code>L</code>, <code>OC</code>, <code>D</code> at ~100 m — so the coast is
+    <code>VE</code>, <code>L</code>, <code>OC</code>, <code>D</code> at ~100 m, so the coast is
     covered continuously from the Mexican border to Oregon. Only the county you are looking at is
     fetched, one at a time. The window is rolling and runs from about six hours behind the present to
-    nearly five days ahead. Its cadence is not uniform — the nowcast is hourly, then the
-    forecast steps every six hours — so playback advances at a constant rate in simulated
+    nearly five days ahead. Its cadence is not uniform: the nowcast is hourly, then the
+    forecast steps every six hours, so playback advances at a constant rate in simulated
     time rather than a constant rate in frames, and the forecast does not race past. The
     badge reads <b>nowcast</b> or <b>forecast</b> either side of the present, and turns red
     with an age if the scheduled rebuild has stopped and the data is no longer current.
@@ -170,7 +170,7 @@
   <p>
     <b>Method.</b> Strand direction is the local peak direction Dp, so in the geometric-optics
     limit the strands are wave rays. Speed is the group velocity from the linear dispersion
-    relation, with the wavenumber from Guo's (2002) explicit fit (~0.75% error) — no iteration,
+    relation, with the wavenumber from Guo's (2002) explicit fit (~0.75% error), with no iteration,
     which keeps it cheap enough to run per particle per frame. Time is interpolated between
     hourly fields on the vector components rather than the angle, so there is no artifact at the
     0/360° seam. Coastline and the model-domain edge are separated by depth at the mask boundary,
@@ -180,8 +180,8 @@
   <p>
     <b>Strands fade out across bimodal fronts.</b> Dp is a <i>peak</i> statistic, so where a
     decaying swell and a rising wind sea carry comparable energy, the spectral peak flips between
-    the two systems from one cell to the next and Dp jumps tens of degrees across a sharp front —
-    cells either side differ in Tp by about 6 s, against 0.05 s elsewhere, which is the giveaway
+    the two systems from one cell to the next and Dp jumps tens of degrees across a sharp front.
+    Cells either side differ in Tp by about 6 s, against 0.05 s elsewhere, which is the giveaway
     that this is two wave systems trading places rather than noise. Smoothing Dp would be worse
     than the disease: the average of two distinct wave systems is a direction in which no wave is
     traveling. Instead the local directional coherence is measured and the field is allowed to go
@@ -191,7 +191,7 @@
   </p>
   <p>
     <b>What this is not.</b> Strands are <i>rays</i>, not water-particle trajectories and not
-    the orbital motion under a wave — nothing here is advecting a physical parcel. Ray convergence
+    the orbital motion under a wave. Nothing here is advecting a physical parcel. Ray convergence
     indicates focusing, but this is a visualization, not a ray solver: it traces an already-computed
     Dp field rather than integrating the eikonal equation, so caustics are implied, not resolved.
     Strand pacing is scaled for legibility, not real time. Color ranges are percentile-clipped
@@ -199,11 +199,11 @@
   </p>
   <p>
     <b>Sea and swell come from a different product.</b> The gridded files publish bulk
-    Hs/Tp/Dp/Ta only — their <code>waveFrequency</code> dimension carries no data variable, so
+    Hs/Tp/Dp/Ta only. Their <code>waveFrequency</code> dimension carries no data variable, so
     there is no per-frequency energy and no <code>a1</code>/<code>b1</code> with which to
     partition a spectrum. A band split is therefore impossible from the grid, at any resolution.
-    The alongshore MOP stations do carry spectra, so the split is computed there — swell
-    0.02–0.0813 Hz, sea 0.09–0.400 Hz, direction from the band energy flux — and drawn as a
+    The alongshore MOP stations do carry spectra, so the split is computed there (swell
+    0.02–0.0813 Hz, sea 0.09–0.400 Hz, direction from the band energy flux) and drawn as a
     coastal fringe over the field. Because the two are genuinely different products, the fringe is
     drawn as discrete vectors rather than blended into the fur, and it updates every three hours
     rather than hourly, which is the alongshore forecast's own cadence.
@@ -211,7 +211,7 @@
   <p>
     <b>Build.</b> THREDDS sends no CORS header, so the page cannot read OPeNDAP directly. A build
     step (<code>build/build_data.py</code>) pulls the grids, merges nowcast with forecast, and
-    quantizes Hs/Tp/Dp to one byte over a wet-cell mask — 0.5 MB for the state, 1.4 MB for San
+    quantizes Hs/Tp/Dp to one byte over a wet-cell mask: 0.5 MB for the state, 1.4 MB for San
     Diego, the latter fetched only when you zoom in. Renderer is plain JavaScript, no
     dependencies, no build step.
   </p>
