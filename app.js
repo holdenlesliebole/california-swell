@@ -224,7 +224,7 @@ function scratch(ncell) {
  * Traced faithfully, those fronts throw adjacent strands off at wildly
  * different angles and read as glitchy straight streaks. Smoothing Dp would be
  * worse than the disease: the average of two distinct wave systems is a
- * direction in which no wave is travelling. Instead we measure the local
+ * direction in which no wave is traveling. Instead we measure the local
  * agreement and let the renderer fade strands out where the peak is ambiguous
  * — the field goes quiet exactly where a single direction stops being a
  * meaningful description of the sea state.

@@ -200,7 +200,7 @@ class Ribbon {
   // --- strands ----------------------------------------------------------
 
   /**
-   * One strand per site per layer. A strand is a point travelling inshore
+   * One strand per site per layer. A strand is a point traveling inshore
    * along the arrival direction at its own site; there is no field to
    * integrate through here, so its path is the straight local ray.
    */
