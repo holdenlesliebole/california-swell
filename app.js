@@ -22,6 +22,12 @@ const CG_REF = 9.0;
 // On-screen strand pace, in pixels per second, at unit relative group speed.
 const PX_PER_SEC = 105;
 
+// Playback rate in simulated seconds per real second: six hours of sea state
+// per second, so the ~5-day gridded window loops in about twenty seconds. Held
+// constant across the axis so the hourly and 6-hourly sections of the window
+// advance at the same physical rate (see _loop).
+const SIM_SEC_PER_SEC = 6 * 3600;
+
 // Directional-coherence window for fading out bimodal fronts (see coherence()).
 // A smoothly refracting field scores ~0.999 — neighbors differ by a degree or
 // two — so the cut sits high and still leaves genuine refraction fully drawn.
@@ -342,7 +348,6 @@ class SwellView {
     this.scalar = 'hs';
     this.playing = true;
     this.tf = 0;              // fractional frame index
-    this.speed = 0.55;        // frames per second of playback
     this.density = 1.0;
     this.particles = null;
     this.pinned = null;       // clicked cell for the time series
@@ -845,7 +850,15 @@ class SwellView {
       this._autoQuality(dt);
 
       if (this.playing) {
-        this.tf += dt * this.speed;
+        // Advance at a constant rate in *simulated* time, not in frames. The
+        // gridded axis is not uniform: the nowcast is hourly, then the forecast
+        // drops to 6-hourly and runs nearly five days out. Stepping by frame
+        // index would race through the forecast six times faster than the
+        // nowcast while the strands claim to move at the group velocity.
+        const times = this.active.meta.times;
+        const i = Math.max(0, Math.min(times.length - 2, Math.floor(this.tf)));
+        const gapSec = Math.max(1, times[i + 1] - times[i]);
+        this.tf += dt * SIM_SEC_PER_SEC / gapSec;
         if (this.tf >= this.active.nt - 1) this.tf = 0;
         this._syncTime();
       }
@@ -1149,10 +1162,28 @@ class SwellView {
       timeZone: 'America/Los_Angeles',
     });
     this.root.querySelector('#clock').textContent = fmt.format(dt) + ' PT';
-    const ahead = t > Date.now();
+
+    // Say whether the data is actually current rather than asserting it. The
+    // payload is rebuilt on a schedule, and a page that keeps printing
+    // "nowcast" after that schedule has failed is worse than one that admits
+    // it does not know: the window is supposed to straddle the present, so if
+    // the whole series now lies in the past the build has stopped running.
+    const last = d.meta.times[d.nt - 1] * 1000;
+    const staleH = (Date.now() - last) / 3.6e6;
     const badge = this.root.querySelector('#kind');
-    badge.textContent = ahead ? 'forecast' : 'nowcast';
-    badge.className = 'badge ' + (ahead ? 'fc' : 'nc');
+    if (staleH > 0) {
+      const age = staleH < 48 ? `${Math.round(staleH)} h` : `${Math.round(staleH / 24)} d`;
+      badge.textContent = `stale · ${age}`;
+      badge.className = 'badge st';
+      badge.title = `The forecast window ends ${age} ago, so the scheduled rebuild `
+                  + `has not run. Values shown are a snapshot, not current conditions.`;
+    } else {
+      const ahead = t > Date.now();
+      badge.textContent = ahead ? 'forecast' : 'nowcast';
+      badge.className = 'badge ' + (ahead ? 'fc' : 'nc');
+      badge.title = '';
+    }
+
     const sc = this.root.querySelector('#scrub');
     if (document.activeElement !== sc) sc.value = String(this.tf);
   }

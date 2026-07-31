@@ -36,6 +36,7 @@
   .badge { font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700; }
   .badge.nc { background:#3fb95022; color:var(--good); }
   .badge.fc { background:#d2992222; color:var(--warn); }
+  .badge.st { background:#f8514922; color:#f85149; cursor:help; }
   #bands-note { font-size:10.5px; color:var(--mut); font-style:italic; line-height:1.35; }
   button#bands.on { background:#60b2e822; border-color:#60b2e8; color:#60b2e8; }
   #domain { font-size:11.5px; color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -159,9 +160,12 @@
     <code>SC</code>, <code>MO</code>, <code>SL</code> at ~200 m and <code>B</code>,
     <code>VE</code>, <code>L</code>, <code>OC</code>, <code>D</code> at ~100 m — so the coast is
     covered continuously from the Mexican border to Oregon. Only the county you are looking at is
-    fetched, one at a time. The window is a rolling ~22 hours: about six hours of analysis behind
-    the present and sixteen ahead, with the boundary marked on the time series and in the
-    nowcast/forecast badge.
+    fetched, one at a time. The window is rolling and runs from about six hours behind the present to
+    nearly five days ahead. Its cadence is not uniform — the nowcast is hourly, then the
+    forecast steps every six hours — so playback advances at a constant rate in simulated
+    time rather than a constant rate in frames, and the forecast does not race past. The
+    badge reads <b>nowcast</b> or <b>forecast</b> either side of the present, and turns red
+    with an age if the scheduled rebuild has stopped and the data is no longer current.
   </p>
   <p>
     <b>Method.</b> Strand direction is the local peak direction Dp, so in the geometric-optics
