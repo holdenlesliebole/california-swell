@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-07T13:41:26Z",
+  "generated": "2026-08-07T19:17:25Z",
   "domains": [
     {
       "id": "ca",
@@ -7,7 +7,7 @@
       "source": "CA_0.01 nowcast+forecast",
       "bytes": {
         "raw": 2577947,
-        "gz": 486387
+        "gz": 484975
       },
       "nt": 22,
       "dlon": 0.01999664306640625,
@@ -24,7 +24,7 @@
       "source": "DN_0.002 nowcast+forecast",
       "bytes": {
         "raw": 1067754,
-        "gz": 178491
+        "gz": 182566
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -40,8 +40,8 @@
       "label": "Humboldt",
       "source": "HU_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4582602,
-        "gz": 592250
+        "raw": 4582536,
+        "gz": 593164
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -58,7 +58,7 @@
       "source": "M_0.002 nowcast+forecast",
       "bytes": {
         "raw": 4130268,
-        "gz": 416964
+        "gz": 399917
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -75,7 +75,7 @@
       "source": "SN_0.002 nowcast+forecast",
       "bytes": {
         "raw": 2015040,
-        "gz": 218998
+        "gz": 206304
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -91,8 +91,8 @@
       "label": "Marin",
       "source": "MA_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1911816,
-        "gz": 454765
+        "raw": 1912278,
+        "gz": 444579
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -108,8 +108,8 @@
       "label": "San Francisco",
       "source": "SF_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 941220,
-        "gz": 275185
+        "raw": 941682,
+        "gz": 271366
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -126,7 +126,7 @@
       "source": "SM_0.002 nowcast+forecast",
       "bytes": {
         "raw": 2557246,
-        "gz": 487211
+        "gz": 470820
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -143,7 +143,7 @@
       "source": "SC_0.002 nowcast+forecast",
       "bytes": {
         "raw": 1702410,
-        "gz": 279685
+        "gz": 277101
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -160,7 +160,7 @@
       "source": "MO_0.002 nowcast+forecast",
       "bytes": {
         "raw": 4414962,
-        "gz": 592319
+        "gz": 594310
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -177,7 +177,7 @@
       "source": "SL_0.002 nowcast+forecast",
       "bytes": {
         "raw": 3233682,
-        "gz": 528505
+        "gz": 529128
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -194,7 +194,7 @@
       "source": "B_0.001 nowcast+forecast",
       "bytes": {
         "raw": 18885206,
-        "gz": 2366222
+        "gz": 2410122
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -210,10 +210,10 @@
       "label": "Ventura",
       "source": "VE_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 6123004,
-        "gz": 1111028
+        "raw": 5867656,
+        "gz": 1056164
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -119.4990005493164,
@@ -227,10 +227,10 @@
       "label": "Los Angeles",
       "source": "L_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 13386144,
-        "gz": 1726139
+        "raw": 12828342,
+        "gz": 1617795
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -118.9990005493164,
@@ -244,10 +244,10 @@
       "label": "Orange",
       "source": "OC_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 8015486,
-        "gz": 903508
+        "raw": 7682864,
+        "gz": 865968
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -118.1989974975586,
@@ -262,7 +262,7 @@
       "source": "D_0.001 nowcast+forecast",
       "bytes": {
         "raw": 9827100,
-        "gz": 1248602
+        "gz": 1241297
       },
       "nt": 22,
       "dlon": 0.00099945068359375,
