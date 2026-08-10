@@ -1,13 +1,13 @@
 {
-  "generated": "2026-08-09T19:03:06Z",
+  "generated": "2026-08-10T02:37:08Z",
   "domains": [
     {
       "id": "ca",
       "label": "California",
       "source": "CA_0.01 nowcast+forecast",
       "bytes": {
-        "raw": 2474558,
-        "gz": 494032
+        "raw": 2456144,
+        "gz": 491984
       },
       "nt": 21,
       "dlon": 0.01999664306640625,
@@ -23,10 +23,10 @@
       "label": "Del Norte",
       "source": "DN_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1067754,
-        "gz": 199083
+        "raw": 1113561,
+        "gz": 202418
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.39800262451172,
@@ -40,10 +40,10 @@
       "label": "Humboldt",
       "source": "HU_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4582668,
-        "gz": 634630
+        "raw": 4780062,
+        "gz": 651210
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.49800109863281,
@@ -57,10 +57,10 @@
       "label": "Mendocino",
       "source": "M_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4130268,
-        "gz": 432293
+        "raw": 4308462,
+        "gz": 442430
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.0979995727539,
@@ -74,10 +74,10 @@
       "label": "Sonoma",
       "source": "SN_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 2015040,
-        "gz": 228149
+        "raw": 2101860,
+        "gz": 237170
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -123.5979995727539,
@@ -91,10 +91,10 @@
       "label": "Marin",
       "source": "MA_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1913466,
-        "gz": 476171
+        "raw": 1996290,
+        "gz": 494702
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -123.0979995727539,
@@ -108,10 +108,10 @@
       "label": "San Francisco",
       "source": "SF_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 942870,
-        "gz": 290343
+        "raw": 985326,
+        "gz": 303611
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -122.697998046875,
@@ -125,10 +125,10 @@
       "label": "San Mateo",
       "source": "SM_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 2557246,
-        "gz": 493211
+        "raw": 2668939,
+        "gz": 511518
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -122.697998046875,
@@ -142,10 +142,10 @@
       "label": "Santa Cruz",
       "source": "SC_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1702410,
-        "gz": 289653
+        "raw": 1777065,
+        "gz": 294606
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -122.39800262451172,
@@ -159,10 +159,10 @@
       "label": "Monterey",
       "source": "MO_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4415028,
-        "gz": 634816
+        "raw": 4604802,
+        "gz": 645932
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -122.0979995727539,
@@ -176,10 +176,10 @@
       "label": "San Luis Obispo",
       "source": "SL_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 3233682,
-        "gz": 574369
+        "raw": 3371463,
+        "gz": 577388
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -121.49800109863281,
@@ -194,7 +194,7 @@
       "source": "B_0.001 nowcast+forecast",
       "bytes": {
         "raw": 18885206,
-        "gz": 2628404
+        "gz": 2513862
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -211,7 +211,7 @@
       "source": "VE_0.001 nowcast+forecast",
       "bytes": {
         "raw": 5867788,
-        "gz": 1157014
+        "gz": 1114680
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -227,8 +227,8 @@
       "label": "Los Angeles",
       "source": "L_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 12828804,
-        "gz": 1767826
+        "raw": 12829068,
+        "gz": 1691709
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -244,8 +244,8 @@
       "label": "Orange",
       "source": "OC_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 7683392,
-        "gz": 932264
+        "raw": 7683656,
+        "gz": 909478
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -262,7 +262,7 @@
       "source": "D_0.001 nowcast+forecast",
       "bytes": {
         "raw": 9419532,
-        "gz": 1285739
+        "gz": 1277798
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
