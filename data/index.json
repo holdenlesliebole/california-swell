@@ -1,13 +1,13 @@
 {
-  "generated": "2026-08-11T13:44:51Z",
+  "generated": "2026-08-11T19:23:26Z",
   "domains": [
     {
       "id": "ca",
       "label": "California",
       "source": "CA_0.01 nowcast+forecast",
       "bytes": {
-        "raw": 2548622,
-        "gz": 524770
+        "raw": 2566769,
+        "gz": 527162
       },
       "nt": 22,
       "dlon": 0.01999664306640625,
@@ -24,7 +24,7 @@
       "source": "DN_0.002 nowcast+forecast",
       "bytes": {
         "raw": 1067754,
-        "gz": 195450
+        "gz": 196142
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -41,7 +41,7 @@
       "source": "HU_0.002 nowcast+forecast",
       "bytes": {
         "raw": 4582800,
-        "gz": 671965
+        "gz": 672083
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -58,7 +58,7 @@
       "source": "M_0.002 nowcast+forecast",
       "bytes": {
         "raw": 4130268,
-        "gz": 429516
+        "gz": 447113
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -75,7 +75,7 @@
       "source": "SN_0.002 nowcast+forecast",
       "bytes": {
         "raw": 2015040,
-        "gz": 222992
+        "gz": 224944
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -91,8 +91,8 @@
       "label": "Marin",
       "source": "MA_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1915512,
-        "gz": 468387
+        "raw": 1915314,
+        "gz": 465875
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -108,8 +108,8 @@
       "label": "San Francisco",
       "source": "SF_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 944916,
-        "gz": 292944
+        "raw": 944718,
+        "gz": 290779
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -126,7 +126,7 @@
       "source": "SM_0.002 nowcast+forecast",
       "bytes": {
         "raw": 2557246,
-        "gz": 477523
+        "gz": 467400
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -143,7 +143,7 @@
       "source": "SC_0.002 nowcast+forecast",
       "bytes": {
         "raw": 1702410,
-        "gz": 284398
+        "gz": 281566
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -159,8 +159,8 @@
       "label": "Monterey",
       "source": "MO_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4414962,
-        "gz": 627760
+        "raw": 4415028,
+        "gz": 607819
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -177,7 +177,7 @@
       "source": "SL_0.002 nowcast+forecast",
       "bytes": {
         "raw": 3233682,
-        "gz": 568480
+        "gz": 558744
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -193,10 +193,10 @@
       "label": "Santa Barbara",
       "source": "B_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 19699079,
-        "gz": 2587405
+        "raw": 18885206,
+        "gz": 2482535
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -120.79900360107422,
@@ -210,10 +210,10 @@
       "label": "Ventura",
       "source": "VE_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 6123211,
-        "gz": 1247389
+        "raw": 5867854,
+        "gz": 1200210
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -119.4990005493164,
@@ -227,10 +227,10 @@
       "label": "Los Angeles",
       "source": "L_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 13391181,
-        "gz": 1827995
+        "raw": 12832368,
+        "gz": 1737242
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -118.9990005493164,
@@ -244,8 +244,8 @@
       "label": "Orange",
       "source": "OC_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 8020523,
-        "gz": 1012853
+        "raw": 8020316,
+        "gz": 1054284
       },
       "nt": 22,
       "dlon": 0.00099945068359375,
@@ -261,8 +261,8 @@
       "label": "San Diego",
       "source": "D_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 9825996,
-        "gz": 1449174
+        "raw": 9827583,
+        "gz": 1463336
       },
       "nt": 22,
       "dlon": 0.00099945068359375,
