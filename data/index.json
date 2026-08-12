@@ -1,15 +1,15 @@
 {
-  "generated": "2026-08-11T19:23:26Z",
+  "generated": "2026-08-12T02:47:46Z",
   "domains": [
     {
       "id": "ca",
       "label": "California",
       "source": "CA_0.01 nowcast+forecast",
       "bytes": {
-        "raw": 2566769,
-        "gz": 527162
+        "raw": 2497262,
+        "gz": 502281
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.01999664306640625,
       "bbox": {
         "lonMin": -124.98999786376953,
@@ -23,10 +23,10 @@
       "label": "Del Norte",
       "source": "DN_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1067754,
-        "gz": 196142
+        "raw": 1113561,
+        "gz": 193272
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.39800262451172,
@@ -40,10 +40,10 @@
       "label": "Humboldt",
       "source": "HU_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4582800,
-        "gz": 672083
+        "raw": 4780131,
+        "gz": 687124
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.49800109863281,
@@ -57,10 +57,10 @@
       "label": "Mendocino",
       "source": "M_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 4130268,
-        "gz": 447113
+        "raw": 4308462,
+        "gz": 477262
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -124.0979995727539,
@@ -74,10 +74,10 @@
       "label": "Sonoma",
       "source": "SN_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 2015040,
-        "gz": 224944
+        "raw": 2101860,
+        "gz": 244584
       },
-      "nt": 21,
+      "nt": 22,
       "dlon": 0.0019989013671875,
       "bbox": {
         "lonMin": -123.5979995727539,
@@ -91,8 +91,8 @@
       "label": "Marin",
       "source": "MA_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 1915314,
-        "gz": 465875
+        "raw": 1913862,
+        "gz": 477728
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -108,8 +108,8 @@
       "label": "San Francisco",
       "source": "SF_0.002 nowcast+forecast",
       "bytes": {
-        "raw": 944718,
-        "gz": 290779
+        "raw": 943266,
+        "gz": 293216
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -126,7 +126,7 @@
       "source": "SM_0.002 nowcast+forecast",
       "bytes": {
         "raw": 2557246,
-        "gz": 467400
+        "gz": 485790
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -143,7 +143,7 @@
       "source": "SC_0.002 nowcast+forecast",
       "bytes": {
         "raw": 1702410,
-        "gz": 281566
+        "gz": 290551
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -160,7 +160,7 @@
       "source": "MO_0.002 nowcast+forecast",
       "bytes": {
         "raw": 4415028,
-        "gz": 607819
+        "gz": 605851
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -177,7 +177,7 @@
       "source": "SL_0.002 nowcast+forecast",
       "bytes": {
         "raw": 3233682,
-        "gz": 558744
+        "gz": 546971
       },
       "nt": 21,
       "dlon": 0.0019989013671875,
@@ -194,7 +194,7 @@
       "source": "B_0.001 nowcast+forecast",
       "bytes": {
         "raw": 18885206,
-        "gz": 2482535
+        "gz": 2432609
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -211,7 +211,7 @@
       "source": "VE_0.001 nowcast+forecast",
       "bytes": {
         "raw": 5867854,
-        "gz": 1200210
+        "gz": 1222111
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -227,8 +227,8 @@
       "label": "Los Angeles",
       "source": "L_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 12832368,
-        "gz": 1737242
+        "raw": 12831642,
+        "gz": 1757333
       },
       "nt": 21,
       "dlon": 0.00099945068359375,
@@ -244,10 +244,10 @@
       "label": "Orange",
       "source": "OC_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 8020316,
-        "gz": 1054284
+        "raw": 7686230,
+        "gz": 1014888
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -118.1989974975586,
@@ -261,10 +261,10 @@
       "label": "San Diego",
       "source": "D_0.001 nowcast+forecast",
       "bytes": {
-        "raw": 9827583,
-        "gz": 1463336
+        "raw": 9383694,
+        "gz": 1339918
       },
-      "nt": 22,
+      "nt": 21,
       "dlon": 0.00099945068359375,
       "bbox": {
         "lonMin": -117.5989990234375,
