@@ -1,53 +1,87 @@
 name: Refresh CDIP swell field
 
-# The page advertises a rolling ~22-hour window (about six hours of nowcast
-# behind the present and sixteen of forecast ahead). Without a scheduled
-# rebuild it silently becomes a snapshot of whenever it was last built, which
-# is worse than not claiming to be live at all. Every six hours keeps the
-# displayed window always straddling the present.
+# Rebuilds the live payloads from THREDDS and deploys the site to Pages as an
+# artifact. The payloads deliberately never enter git history: committing
+# ~12 MB of gzipped binaries every six hours grew the repo by ~50 MB a day and
+# made any fetch after a gap transfer hundreds of MB. The data/ tracked in git
+# is a frozen seed so a bare checkout still runs; the page's stale badge
+# reports the seed's age honestly.
+#
+# Code pushes deploy through the same path, reusing the most recently built
+# payloads from the Actions cache (at most six hours old, the freshness the
+# page promises anyway) instead of spending ~20 minutes against THREDDS for a
+# code change. Scheduled runs always rebuild.
 on:
   schedule:
     - cron: '17 */6 * * *'
+  push:
+    branches: [main]
   workflow_dispatch:
 
-# Least privilege: this job only needs to push the regenerated payload.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: refresh-swell
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore built payloads
+        id: restore
+        if: github.event_name == 'push'
+        uses: actions/cache/restore@v4
+        with:
+          # Only the live payloads build_data.py writes. data/history must
+          # come from the checkout, never the cache: a cached copy can predate
+          # a just-pushed monthly history refresh and would deploy over it.
+          path: |
+            data/*.json
+            data/*.bin.gz
+          key: swell-data-${{ github.run_id }}
+          restore-keys: swell-data-
+
       - uses: actions/setup-python@v5
+        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
         with:
           python-version: '3.12'
 
       - name: Install dependencies
+        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
         run: python -m pip install --quiet netCDF4 numpy scipy
 
       - name: Rebuild payloads from THREDDS
+        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
         run: python build/build_data.py
 
-      - name: Commit if the data changed
+      - name: Cache built payloads for push deploys
+        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/*.json
+            data/*.bin.gz
+          key: swell-data-${{ github.run_id }}
+
+      - name: Assemble the site
         run: |
-          cd "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data
-          # index.json and the metas always contain a fresh `generated`
-          # timestamp, so "did anything change" has to be judged on the actual
-          # field payloads -- otherwise this commits an empty diff every run.
-          if git diff --cached --quiet -- data/ca.bin.gz data/sd.bin.gz; then
-            echo "Fields unchanged since last run; skipping commit."
-            git reset
-          else
-            git commit -m "Refresh CDIP swell field payloads"
-            git push
-          fi
+          mkdir -p _site
+          cp index.html history.html app.js history.js _site/
+          cp -R data _site/data
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

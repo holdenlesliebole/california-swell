@@ -62,9 +62,14 @@ python build/build_data.py --domains sd    # just San Diego
 
 Requires `netCDF4`, `numpy`, `scipy`.
 
-`.github/workflows/refresh-swell.yml` reruns this every six hours and commits
-the result. Without it the page quietly becomes a snapshot while still claiming
-to be live.
+`.github/workflows/refresh-swell.yml` reruns this every six hours and deploys
+the result to Pages as an artifact. Without it the page quietly becomes a
+snapshot while still claiming to be live. The rebuilt payloads deliberately
+never enter git history — committing them grew the repo by ~50 MB a day. What
+`data/` holds in git is a frozen seed so a bare checkout still runs, with the
+stale badge reporting the seed's age. Code pushes deploy through the same
+workflow, reusing the most recently built payloads from the Actions cache
+rather than waiting ~20 minutes on THREDDS.
 
 ## Notes on the data
 

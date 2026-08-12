@@ -15,6 +15,8 @@ on:
 
 permissions:
   contents: write
+  # To kick the deploy workflow after committing new history payloads.
+  actions: write
 
 concurrency:
   group: refresh-swell-history
@@ -51,6 +53,8 @@ jobs:
           python build/build_hindcast.py overview --years "$YEARS" --stride 8
 
       - name: Commit if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           cd "$GITHUB_WORKSPACE"
           git config user.name  "github-actions[bot]"
@@ -62,4 +66,10 @@ jobs:
           else
             git commit -m "Refresh swell history overview (current year)"
             git push
+            # A push made with GITHUB_TOKEN does not fire push-triggered
+            # workflows (recursion guard), so kick the deploy explicitly.
+            # Not load-bearing: if this fails, the next six-hour refresh
+            # ships the new files anyway.
+            gh workflow run refresh-swell.yml --ref main \
+              || echo "dispatch failed; next scheduled refresh will deploy"
           fi
