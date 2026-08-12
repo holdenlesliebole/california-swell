@@ -47,8 +47,13 @@ forecast's own cadence.
 
 CDIP's THREDDS server sends no `Access-Control-Allow-Origin` header, so the page
 cannot read OPeNDAP directly from the browser. `build/build_data.py` runs
-server-side, merges nowcast with forecast onto one hourly axis, and quantizes
-Hs/Tp/Dp to a byte each over a wet-cell mask.
+server-side, merges nowcast with forecast onto one time axis, and quantizes
+Hs/Tp/Dp to a byte each over a wet-cell mask. The merged axis is not uniform:
+the nowcast is hourly, the forecast 6-hourly, which is all the gridded products
+publish. The page presents it hourly anyway — clock, readout, and Hs trace
+interpolate linearly between the 6-hourly forecast frames, and the footer says
+so. Baking interpolated hourly frames into the payloads instead would multiply
+every download by roughly five for data the model never produced.
 
 ```bash
 python build/build_data.py                 # both domains
@@ -66,7 +71,8 @@ to be live.
 **The gridded products are nowcast + forecast only — there is no gridded
 hindcast.** Confirmed against the catalog: `MOP_grids` contains zero files
 matching `hindcast`, only `nowcast`, `forecast`, `seaswellnc` and `seaswellfc`.
-The window is therefore a rolling ~22 hours and cannot be extended backwards.
+The window is therefore rolling — about six hours back to four days ahead —
+and cannot be extended backwards.
 
 The historical record exists only as the **1-D alongshore MOP stations**:
 **11,594 sites covering all 15 California coastal counties** at ~115 m spacing.

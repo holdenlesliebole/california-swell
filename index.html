@@ -108,7 +108,7 @@
     <div class="grp">
       <div class="clockbox"><span id="clock">—</span><span class="badge nc" id="kind">nowcast</span></div>
       <div id="domain">—</div>
-      <input type="range" id="scrub" min="0" max="21" step="0.01" value="0" />
+      <input type="range" id="scrub" min="0" max="113" step="1" value="0" />
       <div class="row"><button id="play">Pause</button><button id="reset">Whole coast</button></div>
       <select id="county"></select>
     </div>
@@ -161,19 +161,22 @@
     <code>VE</code>, <code>L</code>, <code>OC</code>, <code>D</code> at ~100 m, so the coast is
     covered continuously from the Mexican border to Oregon. Only the county you are looking at is
     fetched, one at a time. The window is rolling and runs from about six hours behind the present to
-    nearly five days ahead. Its cadence is not uniform: the nowcast is hourly, then the
+    about four days ahead. Its cadence is not uniform: the nowcast is hourly, then the
     forecast steps every six hours, so playback advances at a constant rate in simulated
     time rather than a constant rate in frames, and the forecast does not race past. The
-    badge reads <b>nowcast</b> or <b>forecast</b> either side of the present, and turns red
-    with an age if the scheduled rebuild has stopped and the data is no longer current.
+    clock, the readout, and the Hs trace tick hour by hour along that axis; between
+    six-hourly forecast frames the values shown are interpolated, not additional model
+    output. The badge reads <b>nowcast</b> or <b>forecast</b> either side of the present,
+    and turns red with an age if the scheduled rebuild has stopped and the data is no
+    longer current.
   </p>
   <p>
     <b>Method.</b> Strand direction is the local peak direction Dp, so in the geometric-optics
     limit the strands are wave rays. Speed is the group velocity from the linear dispersion
     relation, with the wavenumber from Guo's (2002) explicit fit (~0.75% error), with no iteration,
     which keeps it cheap enough to run per particle per frame. Time is interpolated between
-    hourly fields on the vector components rather than the angle, so there is no artifact at the
-    0/360° seam. Coastline and the model-domain edge are separated by depth at the mask boundary,
+    the bracketing fields on the vector components rather than the angle, so there is no artifact
+    at the 0/360° seam. Coastline and the model-domain edge are separated by depth at the mask boundary,
     which a flood fill cannot do: the MOP domains are staircases of nested boxes, and at every
     step corner the offshore padding abuts the continent directly.
   </p>

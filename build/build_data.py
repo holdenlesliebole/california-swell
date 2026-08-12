@@ -10,8 +10,10 @@ Source: https://thredds.cdip.ucsd.edu/thredds/catalog/cdip/model/MOP_grids/
   D_0.001_{nowcast,forecast}.nc   San Diego, 900x500 @ 0.001 deg (~100 m)
 
 Each carries waveHs, waveTp, waveDp on a lat/lon grid. Nowcast is the trailing
-~6 hours, forecast the next ~16, so the merged series is a rolling ~22-hour
-window ending about 16 hours in the future.
+~6 hours at hourly steps; the forecast steps every 6 hours to roughly four
+days ahead. The merged axis is therefore non-uniform, and is shipped that way
+-- the page interpolates its presentation to hourly rather than baking ~5x
+more frames into every payload.
 
 Output per domain, in ../data/:
   <id>.json      grid geometry, time axis, quantization ranges
@@ -97,7 +99,7 @@ def open_with_retry(url: str, tries: int = 4, delay: float = 5.0) -> nc.Dataset:
 
 
 def fetch(stem: str, decim: int):
-    """Merge nowcast + forecast onto one strictly increasing hourly axis."""
+    """Merge nowcast + forecast onto one strictly increasing time axis."""
     lat = lon = depth = None
     frames: dict[int, dict[str, np.ndarray]] = {}
 
@@ -125,7 +127,7 @@ def fetch(stem: str, decim: int):
             d.close()
 
     order = sorted(frames)
-    log(f"  {len(order)} unique hourly frames")
+    log(f"  {len(order)} unique frames")
     return lat, lon, depth, order, frames
 
 

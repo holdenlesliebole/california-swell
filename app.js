@@ -611,16 +611,11 @@ class SwellView {
 
   _setActive(dom) {
     if (this.active === dom) return;
-    // Keep the same wall-clock instant across the switch; the two grids share
-    // an hourly axis but not necessarily the same start time.
-    const nowT = this.active.meta.times[Math.round(this.tf)];
+    // Keep the same wall-clock instant across the switch; the two grids cover
+    // the same window but not necessarily from the same start time.
+    const nowT = this._timeAt(this.tf);
     this.active = dom;
-    let best = 0, bestD = Infinity;
-    dom.meta.times.forEach((t, i) => {
-      const d = Math.abs(t - nowT);
-      if (d < bestD) { bestD = d; best = i; }
-    });
-    this.tf = best;
+    this.tf = this._tfAtTime(nowT);
     // Order matters: the visible-cell set is rebuilt for the new grid here,
     // and seeding strands depends on it.
     this._afterViewChange();
@@ -770,7 +765,7 @@ class SwellView {
 
   /** Nearest band frame to the grid's current instant. */
   _bandFrame() {
-    const want = this.active.meta.times[Math.round(this.tf)];
+    const want = this._timeAt(this.tf);
     const t = this.bands.meta.times;
     let best = 0, bd = Infinity;
     for (let i = 0; i < t.length; i++) {
@@ -843,6 +838,25 @@ class SwellView {
     }
   }
 
+  /** Epoch seconds at a fractional frame index. The axis is non-uniform, so
+   *  this is where "frame 7.5" becomes an actual instant. */
+  _timeAt(tf) {
+    const times = this.active.meta.times;
+    const i = Math.max(0, Math.min(times.length - 2, Math.floor(tf)));
+    return times[i] + (times[i + 1] - times[i]) * (tf - i);
+  }
+
+  /** Fractional frame index at an epoch time, clamped to the window. */
+  _tfAtTime(t) {
+    const times = this.active.meta.times;
+    const n = times.length;
+    if (t <= times[0]) return 0;
+    if (t >= times[n - 1]) return n - 1;
+    let i = 0;
+    while (times[i + 1] < t) i++;
+    return i + (t - times[i]) / (times[i + 1] - times[i]);
+  }
+
   _loop() {
     const step = (now) => {
       const dt = Math.min(0.05, (now - (this._last || now)) / 1000);
@@ -852,7 +866,7 @@ class SwellView {
       if (this.playing) {
         // Advance at a constant rate in *simulated* time, not in frames. The
         // gridded axis is not uniform: the nowcast is hourly, then the forecast
-        // drops to 6-hourly and runs nearly five days out. Stepping by frame
+        // drops to 6-hourly and runs about four days out. Stepping by frame
         // index would race through the forecast six times faster than the
         // nowcast while the strands claim to move at the group velocity.
         const times = this.active.meta.times;
@@ -1046,12 +1060,21 @@ class SwellView {
     return { w, col, row, lon, lat };
   }
 
-  _valuesAt(w, ti) {
-    const d = this.active, f = d.frames[ti];
+  /** Readout values at the current instant, interpolated between the two
+   *  bracketing frames — the panel ticks hourly through a forecast that is
+   *  only stored 6-hourly. Dp takes the shortest arc across the 0/360 seam. */
+  _valuesAt(w) {
+    const d = this.active;
+    const i0 = Math.max(0, Math.min(d.nt - 1, Math.floor(this.tf)));
+    const i1 = Math.min(d.nt - 1, i0 + 1);
+    const fT = Math.min(1, Math.max(0, this.tf - i0));
+    const f0 = d.frames[i0], f1 = d.frames[i1];
+    const a = (f0.dp[w] / 255) * 360, b = (f1.dp[w] / 255) * 360;
+    const arc = ((b - a + 540) % 360) - 180;
     return {
-      hs: (f.hs[w] / 255) * d.meta.vars.hs.max,
-      tp: (f.tp[w] / 255) * d.meta.vars.tp.max,
-      dp: (f.dp[w] / 255) * 360,
+      hs: ((f0.hs[w] + (f1.hs[w] - f0.hs[w]) * fT) / 255) * d.meta.vars.hs.max,
+      tp: ((f0.tp[w] + (f1.tp[w] - f0.tp[w]) * fT) / 255) * d.meta.vars.tp.max,
+      dp: (a + arc * fT + 360) % 360,
       depth: d.depth[w],
     };
   }
@@ -1089,8 +1112,7 @@ class SwellView {
     el.classList.add('on');
 
     const d = this.active;
-    const ti = Math.round(this.tf);
-    const v = this._valuesAt(target.w, ti);
+    const v = this._valuesAt(target.w);
     const ns = target.lat >= 0 ? 'N' : 'S';
     const ew = target.lon >= 0 ? 'E' : 'W';
 
@@ -1107,7 +1129,9 @@ class SwellView {
     this._sparkline(target.w);
   }
 
-  /** 22-hour Hs trace at the pinned cell, with a marker at the current hour. */
+  /** Hs trace across the window at the pinned cell, drawn against true time.
+   *  Index spacing would stretch the hourly nowcast to look as long as the
+   *  6-hourly forecast; here an hour is an hour anywhere on the axis. */
   _sparkline(w) {
     const cv = this.root.querySelector('#spark');
     const ctx = cv.getContext('2d');
@@ -1122,25 +1146,27 @@ class SwellView {
     for (let t = 0; t < d.nt; t++) vals.push((d.frames[t].hs[w] / 255) * d.meta.vars.hs.max);
     const lo = Math.min(...vals), hi = Math.max(...vals);
     const span = Math.max(0.12, hi - lo);
-    const X = (i) => 3 + (i / (d.nt - 1)) * (w0 - 6);
+    const times = d.meta.times;
+    const t0 = times[0], tSpan = Math.max(1, times[d.nt - 1] - t0);
+    const X = (t) => 3 + ((t - t0) / tSpan) * (w0 - 6);
     const Y = (v) => h0 - 10 - ((v - lo) / span) * (h0 - 20);
 
-    // Divider at the nowcast/forecast boundary, if the axis spans it.
-    const nowIdx = d.meta.times.findIndex((t) => t * 1000 > Date.now());
-    if (nowIdx > 0) {
+    // Divider at the present, when the window straddles it.
+    const nowS = Date.now() / 1000;
+    if (nowS > t0 && nowS < times[d.nt - 1]) {
       ctx.strokeStyle = 'rgba(139,148,158,0.45)';
       ctx.setLineDash([2, 3]);
-      ctx.beginPath(); ctx.moveTo(X(nowIdx), 4); ctx.lineTo(X(nowIdx), h0 - 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(nowS), 4); ctx.lineTo(X(nowS), h0 - 6); ctx.stroke();
       ctx.setLineDash([]);
     }
 
     ctx.strokeStyle = '#58a6ff';
     ctx.lineWidth = 1.4;
     ctx.beginPath();
-    vals.forEach((v, i) => (i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))));
+    vals.forEach((v, i) => (i ? ctx.lineTo(X(times[i]), Y(v)) : ctx.moveTo(X(times[i]), Y(v))));
     ctx.stroke();
 
-    const cx = X(this.tf), cy = Y(vals[Math.round(this.tf)]);
+    const cx = X(this._timeAt(this.tf)), cy = Y(this._valuesAt(w).hs);
     ctx.fillStyle = '#e6edf3';
     ctx.beginPath(); ctx.arc(cx, cy, 2.6, 0, Math.PI * 2); ctx.fill();
 
@@ -1154,9 +1180,12 @@ class SwellView {
 
   _syncTime() {
     const d = this.active;
-    const ti = Math.round(this.tf);
-    const t = d.meta.times[ti] * 1000;
-    const dt = new Date(t);
+    // The clock reads the interpolated instant, snapped to the hour. The
+    // forecast frames sit six hours apart, but the playback clock should not:
+    // the field between them is already being drawn by interpolation, so the
+    // clock ticks through every hour it crosses rather than jumping six.
+    const tSec = this._timeAt(this.tf);
+    const dt = new Date(Math.round(tSec / 3600) * 3.6e6);
     const fmt = new Intl.DateTimeFormat([], {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
       timeZone: 'America/Los_Angeles',
@@ -1178,19 +1207,24 @@ class SwellView {
       badge.title = `The forecast window ends ${age} ago, so the scheduled rebuild `
                   + `has not run. Values shown are a snapshot, not current conditions.`;
     } else {
-      const ahead = t > Date.now();
+      const ahead = tSec * 1000 > Date.now();
       badge.textContent = ahead ? 'forecast' : 'nowcast';
       badge.className = 'badge ' + (ahead ? 'fc' : 'nc');
       badge.title = '';
     }
 
     const sc = this.root.querySelector('#scrub');
-    if (document.activeElement !== sc) sc.value = String(this.tf);
+    if (document.activeElement !== sc) {
+      sc.value = String((tSec - d.meta.times[0]) / 3600);
+    }
   }
 
   _syncChrome() {
     const d = this.active;
-    this.root.querySelector('#scrub').max = String(d.nt - 1);
+    // The scrub runs in hours, not frame indices: on a non-uniform axis equal
+    // slider travel should mean equal time, and each step is one clock hour.
+    const times = d.meta.times;
+    this.root.querySelector('#scrub').max = String((times[d.nt - 1] - times[0]) / 3600);
     // Resolution is read from the grid spacing itself — which already reflects
     // any decimation applied at build time — so adding a county needs no
     // matching change here.
@@ -1300,7 +1334,8 @@ class SwellView {
     });
 
     this.root.querySelector('#scrub').addEventListener('input', (e) => {
-      this.tf = parseFloat(e.target.value);
+      const t0 = this.active.meta.times[0];
+      this.tf = this._tfAtTime(t0 + parseFloat(e.target.value) * 3600);
       this._syncTime();
     });
 
