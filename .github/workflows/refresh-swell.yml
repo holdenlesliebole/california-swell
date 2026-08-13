@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -63,6 +63,16 @@ jobs:
       - name: Rebuild payloads from THREDDS
         if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
         run: python build/build_data.py
+
+      - name: Rebuild the coastal sea/swell split
+        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
+        # The fringe is an optional overlay drawn from a different product
+        # (the alongshore stations); a THREDDS hiccup here should not abort
+        # the field deploy. The fallback is whatever live_bands the checkout
+        # or cache already had, whose age the payload's own metadata carries.
+        run: |
+          python build/build_hindcast.py live --stride 4 \
+            || echo "live bands rebuild failed; deploying the previous copy"
 
       - name: Cache built payloads for push deploys
         if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''

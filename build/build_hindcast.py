@@ -537,7 +537,7 @@ def build_event(slug, stride, out, days=7):
     }, raw)
 
 
-def build_live(stride, out, back_h=6, fwd_h=16):
+def build_live(stride, out, back_h=6, fwd_h=96):
     """Bake the current sea/swell split along the coast.
 
     The live page's grid can show a 2-D field but not a band split -- the
@@ -546,7 +546,10 @@ def build_live(stride, out, back_h=6, fwd_h=16):
     split has to come from them, drawn as a coastal fringe over the field.
 
     The window is aligned to the gridded page: a few hours behind the present
-    and sixteen ahead.
+    and about four days ahead. The alongshore forecast reaches ~6 days out, so
+    the window fits inside the one file each site already provides; a fringe
+    that stopped at the old +16 h would sit frozen on its last frame for most
+    of the page's playback.
     """
     sites = load_sites(out)
     names = sites["name"][::stride]
