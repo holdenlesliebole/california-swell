@@ -44,6 +44,7 @@ import datetime as dt
 import gzip
 import json
 import math
+import os
 import pathlib
 import re
 import sys
@@ -74,8 +75,15 @@ TSWITCH = dt.datetime(2025, 4, 1, tzinfo=dt.timezone.utc)
 # on why two hand-picked ceilings were both wrong.
 HS_MAX = 12.0
 # The work is entirely THREDDS round-trips -- a one-year build ran at 14% CPU --
-# so concurrency is set well above the core count on purpose.
-WORKERS = 32
+# so concurrency is set well above the core count on purpose. It is capped well
+# below what the client can sustain, though: 32 processes cleared 2899 sites in
+# 65 s, and every site is several OPeNDAP requests, which put a few hundred
+# requests a second onto a shared academic server four times a day. CDIP began
+# answering some of those runs with its abuse-filter page ("Access Denied",
+# errno -78) on 2026-09-14. Whether the rate is what tripped it is unconfirmed,
+# so this is a precaution rather than a known cure: 8 processes finish the live
+# split in ~4 min, which the 40-minute job budget absorbs without complaint.
+WORKERS = int(os.environ.get("CDIP_WORKERS", "8"))
 
 _print_lock = threading.Lock()
 
@@ -571,6 +579,7 @@ def build_live(stride, out, back_h=6, fwd_h=96):
 
 
 def main() -> int:
+    global WORKERS
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["sites", "overview", "events", "event", "live"])
@@ -579,7 +588,11 @@ def main() -> int:
     ap.add_argument("--slug")
     ap.add_argument("--top", type=int, default=6)
     ap.add_argument("--out", type=pathlib.Path, default=here() / "data")
+    ap.add_argument("--workers", type=int, default=WORKERS,
+                    help="concurrent THREDDS readers; keep it modest, CDIP is a "
+                         "shared server and blocks sources that hammer it")
     a = ap.parse_args()
+    WORKERS = a.workers
 
     if a.cmd == "sites":
         write_sites(fetch_site_table(), a.out)

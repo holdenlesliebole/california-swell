@@ -37,6 +37,7 @@ import argparse
 import gzip
 import json
 import pathlib
+import random
 import sys
 import time
 
@@ -52,6 +53,20 @@ HS_MAX = 8.0     # m,  -> 3.1 cm per level
 TP_MAX = 25.5    # s,  -> 0.1 s per level
 DP_MAX = 360.0   # deg, -> 1.41 deg per level
 DEPTH_LOG_MIN, DEPTH_LOG_MAX = 0.0, 3.7  # log10 m, 1 m to ~5000 m
+
+# Seconds to wait after CDIP's abuse filter denies a request, one entry per
+# retry. Deliberately much longer than the plain-error retry -- the blocks seen
+# so far clear on a scale of minutes to hours, not seconds -- and deliberately
+# short: waiting out a block that lasts hours is not this job's business, and
+# the four-minute budget here has to be paid per domain.
+DENIAL_BACKOFF = (60.0, 180.0)
+
+# Consecutive denied domains before the run stops asking. A block is a property
+# of the source address, not of the dataset, so once two domains in a row are
+# refused the remaining fourteen will be too; trying them anyway costs the job
+# an hour it does not have and adds fourteen domains' worth of requests to
+# whatever made CDIP object in the first place.
+DENIAL_GIVE_UP_AFTER = 2
 
 # The statewide grid plus every county grid CDIP publishes. Together the county
 # grids tile the coast continuously from the Mexican border to Oregon, so the
@@ -85,16 +100,44 @@ def log(msg: str) -> None:
     print(f"[build] {msg}", file=sys.stderr, flush=True)
 
 
+def is_denial(exc: BaseException) -> bool:
+    """True if THREDDS refused us rather than failed.
+
+    CDIP fronts THREDDS with an abuse filter that answers a blocked source with
+    a JSON body ({"error": "Access Denied", ...}) where the DAP client expects a
+    DDS. netCDF surfaces that as an authorization failure, errno -78, which is
+    worth separating from a genuine server error: a 500 clears in seconds, a
+    block does not, and retrying hard against one only deepens it.
+    """
+    return "Authorization failure" in str(exc) or "[Errno -78]" in str(exc)
+
+
 def open_with_retry(url: str, tries: int = 4, delay: float = 5.0) -> nc.Dataset:
-    """THREDDS intermittently 500s under load; a couple of retries is enough."""
+    """THREDDS intermittently 500s under load; a couple of retries is enough.
+
+    A denial gets a different schedule. Five seconds is the right wait for a
+    server hiccup and the wrong one for an abuse filter, so back off to minutes
+    and give up sooner: the caller keeps the previous payload for this domain
+    rather than the run failing outright.
+    """
+    denials = 0
     for attempt in range(1, tries + 1):
         try:
             return nc.Dataset(url)
         except OSError as exc:
-            if attempt == tries:
-                raise
-            log(f"  open failed ({exc.__class__.__name__}), retry {attempt}/{tries - 1} in {delay:.0f}s")
-            time.sleep(delay)
+            if is_denial(exc):
+                denials += 1
+                if denials > len(DENIAL_BACKOFF):
+                    raise
+                wait = DENIAL_BACKOFF[denials - 1]
+                wait *= 1.0 + 0.25 * random.random()   # jitter, against a synchronized retry storm
+                log(f"  THREDDS denied the request, retry {denials}/{len(DENIAL_BACKOFF)} in {wait:.0f}s")
+            else:
+                if attempt == tries:
+                    raise
+                wait = delay
+                log(f"  open failed ({exc.__class__.__name__}), retry {attempt}/{tries - 1} in {wait:.0f}s")
+            time.sleep(wait)
     raise AssertionError("unreachable")
 
 
@@ -260,9 +303,48 @@ def main() -> int:
     ap.add_argument("--domains", nargs="+", default=list(DOMAINS), choices=list(DOMAINS))
     ap.add_argument("--out", type=pathlib.Path,
                     default=pathlib.Path(__file__).resolve().parent.parent / "data")
+    ap.add_argument("--strict", action="store_true",
+                    help="fail the run if any domain cannot be rebuilt, instead "
+                         "of keeping that domain's previous payload")
     args = ap.parse_args()
 
-    built = [build(d, args.out) for d in args.domains]
+    # A domain that cannot be rebuilt keeps whatever payload is already on
+    # disk, and the run carries on. The alternative -- aborting -- takes the
+    # whole site down over one upstream refusal, and there is nothing dishonest
+    # about serving the older file: the page dates every domain from its own
+    # time axis, so a stale payload shows up as "stale - N h" on its own.
+    built, stale = [], []
+    denied_in_a_row = 0
+    for d in args.domains:
+        exc = None
+        if denied_in_a_row >= DENIAL_GIVE_UP_AFTER:
+            log(f"{d}: skipped, CDIP is refusing this runner")
+        else:
+            try:
+                built.append(build(d, args.out))
+                denied_in_a_row = 0
+                continue
+            except Exception as err:
+                exc = err
+                denied_in_a_row = denied_in_a_row + 1 if is_denial(err) else 0
+
+        prev = args.out / f"{d}.json"
+        if args.strict or not prev.exists():
+            if exc is not None:
+                raise exc
+            raise RuntimeError(f"{d}: no previous payload to fall back on")
+        if exc is not None:
+            log(f"{d}: rebuild failed ({exc.__class__.__name__}: {exc})")
+        log(f"{d}: keeping the payload already on disk")
+        built.append(json.loads(prev.read_text()))
+        stale.append(d)
+        if exc is not None and denied_in_a_row == DENIAL_GIVE_UP_AFTER:
+            log(f"{DENIAL_GIVE_UP_AFTER} domains refused in a row; "
+                f"keeping the rest at their previous build without asking again")
+
+    if stale and len(stale) == len(args.domains):
+        log(f"every domain failed to rebuild: {' '.join(stale)}")
+        return 1
 
     def summary(m):
         g = m["grid"]
@@ -282,8 +364,16 @@ def main() -> int:
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "domains": [summary(m) for m in built],
     }
+    if stale:
+        # Name them in the index so the staleness is legible from the payload
+        # itself, not only from a workflow log that expires.
+        index["stale"] = stale
     (args.out / "index.json").write_text(json.dumps(index, indent=2) + "\n")
-    log("done")
+    if stale:
+        log(f"done, with {len(stale)}/{len(args.domains)} domains kept from the "
+            f"previous build: {' '.join(stale)}")
+    else:
+        log("done")
     return 0
 
 

@@ -58,9 +58,22 @@ every download by roughly five for data the model never produced.
 ```bash
 python build/build_data.py                 # both domains
 python build/build_data.py --domains sd    # just San Diego
+python build/build_data.py --strict        # do not fall back, fail on any refusal
 ```
 
 Requires `netCDF4`, `numpy`, `scipy`.
+
+CDIP fronts THREDDS with an abuse filter, and it answers a source it objects to
+with an "Access Denied" page where the DAP client expects a DDS; netCDF reports
+that as errno -78. It first refused this workflow on 2026-09-14. A refusal costs
+that domain its refresh and nothing more: the builder keeps the payload already
+on disk, names it under `stale` in `data/index.json`, and carries on, because
+the page dates every domain from its own time axis and shows an old one as
+`stale · N h` without being told. Only a refusal of *every* domain exits
+non-zero. After two consecutive refusals the builder stops asking, since a block
+is a property of the source address rather than of the dataset. `--strict` turns the
+fallback off, which is what you want when debugging locally. The behavior is
+pinned by `build/test_denial.py`, which stubs netCDF and needs no network.
 
 `.github/workflows/refresh-swell.yml` reruns this every six hours and deploys
 the result to Pages as an artifact. Without it the page quietly becomes a
@@ -106,10 +119,16 @@ python build/build_hindcast.py overview --years 2000-2026 --stride 8
 python build/build_hindcast.py events --top 20                # derived, not remembered
 python build/build_hindcast.py event --slug 2023-01-06 --stride 4
 python build/build_hindcast.py live --stride 4                # coastal sea/swell split
+python build/build_hindcast.py live --stride 4 --workers 16   # faster, ruder
 ```
 
 Overview years are skipped if already built, so a long run can just be
-restarted. Two traps worth knowing about, both of which produced plausible-
+restarted. `--workers` (default 8, or `CDIP_WORKERS`) sets how many sites are
+read at once. It used to be 32, which cleared 2899 sites in 65 s and put a few
+hundred OPeNDAP requests a second onto a shared academic server four times a
+day; 8 takes about four minutes, which the job budget absorbs. Whether that rate
+is what CDIP's filter objected to is unconfirmed, so this is a precaution, not a
+known cure. Raise it for a one-off local run if you need to, not on a schedule. Two traps worth knowing about, both of which produced plausible-
 looking wrong output before being caught:
 
 - **Site IDs are five characters, so padding depends on the prefix length** —
