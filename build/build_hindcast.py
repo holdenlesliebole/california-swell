@@ -75,14 +75,17 @@ TSWITCH = dt.datetime(2025, 4, 1, tzinfo=dt.timezone.utc)
 # on why two hand-picked ceilings were both wrong.
 HS_MAX = 12.0
 # The work is entirely THREDDS round-trips -- a one-year build ran at 14% CPU --
-# so concurrency is set well above the core count on purpose. It is capped well
-# below what the client can sustain, though: 32 processes cleared 2899 sites in
-# 65 s, and every site is several OPeNDAP requests, which put a few hundred
-# requests a second onto a shared academic server four times a day. CDIP began
-# answering some of those runs with its abuse-filter page ("Access Denied",
-# errno -78) on 2026-09-14. Whether the rate is what tripped it is unconfirmed,
-# so this is a precaution rather than a known cure: 8 processes finish the live
-# split in ~4 min, which the 40-minute job budget absorbs without complaint.
+# so concurrency is set well above the core count on purpose, but far below what
+# the client can drive. CDIP began answering some scheduled runs with its
+# abuse-filter page ("Access Denied", errno -78) on 2026-09-14, and 32 readers
+# put a few hundred OPeNDAP requests a second onto a shared academic server four
+# times a day. Whether that rate is what tripped the filter is unconfirmed, so
+# dropping to 8 is a precaution, not a known cure.
+#
+# It is nearly free, which is the argument for it: measured in CI on the live
+# split, 32 readers took 65 s for 2899 sites and 8 took 77 s. Four times the
+# concurrency bought 15% of wall time, so most of what those 32 processes were
+# doing was queueing behind each other at the far end.
 WORKERS = int(os.environ.get("CDIP_WORKERS", "8"))
 
 _print_lock = threading.Lock()

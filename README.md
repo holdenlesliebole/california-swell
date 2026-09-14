@@ -124,11 +124,13 @@ python build/build_hindcast.py live --stride 4 --workers 16   # faster, ruder
 
 Overview years are skipped if already built, so a long run can just be
 restarted. `--workers` (default 8, or `CDIP_WORKERS`) sets how many sites are
-read at once. It used to be 32, which cleared 2899 sites in 65 s and put a few
-hundred OPeNDAP requests a second onto a shared academic server four times a
-day; 8 takes about four minutes, which the job budget absorbs. Whether that rate
-is what CDIP's filter objected to is unconfirmed, so this is a precaution, not a
-known cure. Raise it for a one-off local run if you need to, not on a schedule. Two traps worth knowing about, both of which produced plausible-
+read at once. It used to be 32, which put a few hundred OPeNDAP requests a
+second onto a shared academic server four times a day. Whether that rate is what
+CDIP's filter objected to is unconfirmed, so the cut is a precaution rather than
+a known cure, but it costs almost nothing: measured in CI on the live split, 32
+readers took 65 s for 2899 sites and 8 took 77 s. Most of that concurrency was
+queueing at the far end, not moving data. Raise it for a one-off local run if
+you need to, not on a schedule. Two traps worth knowing about, both of which produced plausible-
 looking wrong output before being caught:
 
 - **Site IDs are five characters, so padding depends on the prefix length** —
