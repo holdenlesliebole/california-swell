@@ -30,7 +30,10 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # A clean sweep is ~13 min with the builder's pacing. The budget covers the
+    # worst shape instead: a refused sweep (~10 min), the quarter hour the
+    # builder waits for the block to clear, and a second sweep that gets through.
+    timeout-minutes: 70
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -73,20 +76,42 @@ jobs:
         run: python build/test_denial.py
 
       - name: Rebuild payloads from THREDDS
+        id: rebuild
         if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
-        # Exits non-zero only if *every* domain failed, which means THREDDS is
-        # down or this runner is blocked outright. A refusal on some domains
-        # leaves those payloads at their previous build and carries on; the
-        # page dates each domain from its own time axis, so a stale one
-        # announces itself as "stale - N h" without the site going dark.
-        run: python build/build_data.py
+        # A refusal on some domains leaves those payloads at their previous
+        # build and carries on; the page dates each domain from its own time
+        # axis, so a stale one announces itself as "stale - N h" without the
+        # site going dark.
+        #
+        # Exit 3 is the builder saying CDIP refused every domain while what is
+        # already on disk is still inside its staleness budget. Nothing was
+        # rebuilt, so this run deploys the previous payloads unchanged, and it
+        # does so green: CDIP blocks this runner a few times a month, the
+        # blocks clear on their own, and a payload carries four days of
+        # forecast, so one missed cycle is invisible to a visitor. The builder
+        # returns 1 once the block has outlasted that budget, which is the case
+        # worth a red run.
+        run: |
+          rc=0
+          python build/build_data.py || rc=$?
+          if [ "$rc" -eq 3 ]; then
+            echo "degraded=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit $rc
 
       - name: Rebuild the coastal sea/swell split
-        if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
+        if: >-
+          (github.event_name != 'push' || steps.restore.outputs.cache-matched-key == '')
+          && steps.rebuild.outputs.degraded != '1'
         # The fringe is an optional overlay drawn from a different product
         # (the alongshore stations); a THREDDS hiccup here should not abort
         # the field deploy. The fallback is whatever live_bands the checkout
         # or cache already had, whose age the payload's own metadata carries.
+        #
+        # Skipped outright when the field rebuild came back refused: a block is
+        # a property of this runner's address, so the fringe would be refused
+        # too, and asking adds requests to whatever CDIP objected to.
         run: |
           python build/build_hindcast.py live --stride 4 \
             || echo "live bands rebuild failed; deploying the previous copy"
@@ -102,9 +127,19 @@ jobs:
 
       - name: Report any domain left at its previous build
         if: github.event_name != 'push' || steps.restore.outputs.cache-matched-key == ''
+        env:
+          DEGRADED: ${{ steps.rebuild.outputs.degraded }}
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json, pathlib
+          import json, os, pathlib
+          if os.environ.get("DEGRADED") == "1":
+              # index.json still describes the last build that actually ran, so
+              # it has nothing to say about this one; do not read staleness out
+              # of it here.
+              print("**Refused.** CDIP refused every domain from this runner, so "
+                    "nothing was rebuilt and the previous payloads deploy "
+                    "unchanged. See the rebuild step for their age.")
+              raise SystemExit(0)
           p = pathlib.Path("data/index.json")
           stale = json.loads(p.read_text()).get("stale", []) if p.exists() else []
           if stale:

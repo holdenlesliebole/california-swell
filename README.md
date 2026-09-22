@@ -59,21 +59,53 @@ every download by roughly five for data the model never produced.
 python build/build_data.py                 # both domains
 python build/build_data.py --domains sd    # just San Diego
 python build/build_data.py --strict        # do not fall back, fail on any refusal
+python build/build_data.py --pace 0 \
+    --refusal-retry-wait 0                 # no pacing, no second pass: local debugging
 ```
 
 Requires `netCDF4`, `numpy`, `scipy`.
 
 CDIP fronts THREDDS with an abuse filter, and it answers a source it objects to
 with an "Access Denied" page where the DAP client expects a DDS; netCDF reports
-that as errno -78. It first refused this workflow on 2026-09-14. A refusal costs
-that domain its refresh and nothing more: the builder keeps the payload already
-on disk, names it under `stale` in `data/index.json`, and carries on, because
-the page dates every domain from its own time axis and shows an old one as
-`stale · N h` without being told. Only a refusal of *every* domain exits
-non-zero. After two consecutive refusals the builder stops asking, since a block
-is a property of the source address rather than of the dataset. `--strict` turns the
-fallback off, which is what you want when debugging locally. The behavior is
-pinned by `build/test_denial.py`, which stubs netCDF and needs no network.
+that as errno -78. It first refused this workflow on 2026-09-14, and refused it
+again on 09-09 and twice on 09-21: four of the last sixty scheduled runs. The
+block follows the runner's address, not the dataset. CDIP answers this laptop
+normally during a refusal, and after two consecutive refusals the builder stops
+asking rather than working through the other fourteen domains.
+
+A refusal costs that domain its refresh and nothing more: the builder keeps the
+payload already on disk, names it under `stale` in `data/index.json`, and
+carries on, because the page dates every domain from its own time axis and
+shows an old one as `stale · N h` without being told.
+
+A refusal of *every* domain is handled by age rather than by principle. The
+builder waits fifteen minutes and sweeps once more, and if that is refused too
+it reads the `generated` stamp inside the payloads on disk. Younger than
+`STALE_BUDGET_H` (18 h, three missed cycles) it exits **3**: nothing was
+rebuilt, the previous payloads deploy unchanged, and the workflow stays green,
+because each payload carries four days of forecast and one missed cycle is
+invisible to a visitor. Older than that, the block has outlasted what the
+forecast window covers, and it exits **1**. `index.json` is left alone either
+way, so its `generated` stamp keeps belonging to the build that actually
+produced the files.
+
+The sweep pulls roughly 1.1 GB of float32 over DAP, 259 MB of it for Santa
+Barbara, four times a day, so `--pace` puts 25 s between domains to keep the
+average rate down. Whether the filter keys on rate is a guess; the volume is
+measured. `--strict` turns the fallback off, which is what you want when
+debugging locally. The behavior is pinned by `build/test_denial.py`, which
+stubs netCDF and needs no network.
+
+Two things that do not work, so they are not worth retrying. Identifying the
+client to CDIP through `HTTP.USERAGENT` in `.ncrc`, `.daprc` or `.dodsrc` does
+nothing: netcdf-c 4.9.2's DAP2 client sends `oc4.9.2` regardless, measured
+against a local server that logged the header, from both the working directory
+and `$HOME`. Pulling whole files over `fileServer` instead of subsetting over
+DAP is far worse, not better: `B_0.001_forecast.nc` alone is 286 MB. If the
+blocks ever need a real fix, the paths left are the NetCDF Subset Service,
+which is enabled on this server and would be requested with `requests`, headers
+and all, or an email to www@cdip.ucsd.edu, which is what the refusal body asks
+for.
 
 `.github/workflows/refresh-swell.yml` reruns this every six hours and deploys
 the result to Pages as an artifact. Without it the page quietly becomes a
